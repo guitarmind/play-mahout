@@ -1,4 +1,4 @@
-package markpeng.mahout;
+package markpeng.mahout.test;
 
 import java.io.IOException;
 import java.util.Arrays;
