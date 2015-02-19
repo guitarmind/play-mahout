@@ -1,4 +1,4 @@
-package markpeng.mahout;
+package markpeng.kaggle;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
