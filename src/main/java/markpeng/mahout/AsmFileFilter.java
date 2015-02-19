@@ -128,13 +128,21 @@ public class AsmFileFilter {
 		usageString += "<asmFolder> = the path of asm files.\n";
 		usageString += "<outputFolder> = output folder for filtered files.\n";
 
+		// args = new String[3];
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/8086.txt|/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/80386.txt";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
+
 		if (args.length == 3) {
 			String cmdFile = args[0];
 			String asmFolder = args[1];
 			String outputFolder = args[2];
 			List<String> files = new ArrayList<String>();
 			if (cmdFile.contains("|")) {
-				String[] sp = cmdFile.split("|");
+				String[] sp = cmdFile.split("\\|");
 				files = Arrays.asList(sp);
 			} else
 				files.add(cmdFile);
