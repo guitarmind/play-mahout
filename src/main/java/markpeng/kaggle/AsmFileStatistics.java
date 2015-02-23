@@ -18,6 +18,7 @@ public class AsmFileStatistics {
 
 	public void showFileFormat(String asmLabeledFileFolder, String outputFolder)
 			throws Exception {
+
 		TreeMap<String, TreeMap<String, Integer>> stats = new TreeMap<String, TreeMap<String, Integer>>();
 
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
@@ -46,19 +47,23 @@ public class AsmFileStatistics {
 						BufferedReader in = new BufferedReader(
 								new InputStreamReader(new FileInputStream(
 										asmFile), "UTF-8"));
+						File f = new File(asmFile);
+						boolean found = false;
 
 						try {
+
 							String aLine = null;
 							while ((aLine = in.readLine()) != null) {
 								String tmp = aLine.trim();
-								if (tmp.contains("; Format	     :")) {
-									File f = new File(asmFile);
+								if (tmp.contains("; Format")
+										|| tmp.contains(";	Format")
+										|| tmp.contains("Processor	   :")) {
 
 									tmp = tmp.substring(
 											tmp.lastIndexOf(":") + 1).trim();
 
-									System.out.println(f.getName() + " ==> "
-											+ tmp);
+									// System.out.println(f.getName() + " ==> "
+									// + tmp);
 									resultStr.append(i + "," + f.getName()
 											+ "," + tmp + newLine);
 
@@ -68,9 +73,9 @@ public class AsmFileStatistics {
 										map.put(tmp, map.get(tmp) + 1);
 									}
 
+									found = true;
 									break;
 								}
-
 							}
 						} finally {
 							in.close();
@@ -83,7 +88,14 @@ public class AsmFileStatistics {
 						}
 
 						System.out.println("Scanned asm file in label " + i
-								+ ": " + asmFile);
+								+ ": " + f.getName());
+
+						if (!found) {
+							System.out.println(f.getName()
+									+ " no format found! ");
+							resultStr.append(i + "," + f.getName() + ",NULL"
+									+ newLine);
+						}
 					} // end of for loop
 
 				}
@@ -98,13 +110,19 @@ public class AsmFileStatistics {
 		}
 
 		if (stats.size() > 0) {
+			int totalCount = 0;
 			for (String label : stats.keySet()) {
 				System.out.println("[Label " + label + "]");
 				TreeMap<String, Integer> map = stats.get(label);
 				for (String format : map.keySet()) {
-					System.out.println(format + ": " + map.get(format));
+					int count = map.get(format);
+					System.out.println(format + ": " + count);
+
+					totalCount += count;
 				}
 			}
+
+			System.out.println("Total processed files: " + totalCount);
 		}
 
 	}
