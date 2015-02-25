@@ -181,7 +181,7 @@ public class AsmFileFilter {
 										&& !token.startsWith("dd")) {
 									token = token
 											.replaceAll(
-													"[\\s\\t\\;\\|\\@\\?\\:\\(\\)\\'\\\"\\[\\]]",
+													"[\\s\\t\\;\\|\\@\\?\\:\\(\\)\\'\\\"\\[\\]\\,]",
 													" ");
 									fStr.append(token + " ");
 								}
