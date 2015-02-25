@@ -10,7 +10,6 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.TreeMap;
 
 public class AsmFileFilter {
 
@@ -122,21 +121,32 @@ public class AsmFileFilter {
 		}
 	}
 
-	public void filterByPattern(String asmLabeledFileFolder, String outputFolder)
-			throws Exception {
+	public void filterByPattern(String asmFileFolder, String outputFolder,
+			boolean subfolder) throws Exception {
 
 		File f = new File(outputFolder);
 		if (!f.exists())
 			f.mkdir();
 
-		// 9 labels
-		for (int i = 1; i <= 9; i++) {
+		int loopN = 9;
+		if (!subfolder)
+			loopN = 1;
 
-			File inputChecker = new File(asmLabeledFileFolder + "/" + i);
+		// 9 labels
+		for (int i = 1; i <= loopN; i++) {
+
+			File inputChecker = null;
+			if (!subfolder)
+				inputChecker = new File(asmFileFolder);
+			else
+				inputChecker = new File(asmFileFolder + "/" + i);
+
 			if (inputChecker.exists()) {
-				File outputChecker = new File(outputFolder + "/" + i);
-				if (!outputChecker.exists())
-					outputChecker.mkdir();
+				if (subfolder) {
+					File outputChecker = new File(outputFolder + "/" + i);
+					if (!outputChecker.exists())
+						outputChecker.mkdir();
+				}
 
 				List<String> asmFiles = new ArrayList<String>();
 				for (final File fileEntry : inputChecker.listFiles()) {
@@ -151,10 +161,19 @@ public class AsmFileFilter {
 							+ "_filtered";
 
 					StringBuffer resultStr = new StringBuffer();
-					BufferedWriter out = new BufferedWriter(
-							new OutputStreamWriter(new FileOutputStream(
-									outputFolder + "/" + i + "/"
-											+ filterFileName, false), "UTF-8"));
+
+					BufferedWriter out = null;
+
+					if (!subfolder)
+						out = new BufferedWriter(new OutputStreamWriter(
+								new FileOutputStream(outputFolder + "/"
+										+ filterFileName, false), "UTF-8"));
+					else
+						out = new BufferedWriter(
+								new OutputStreamWriter(new FileOutputStream(
+										outputFolder + "/" + i + "/"
+												+ filterFileName, false),
+										"UTF-8"));
 
 					BufferedReader in = new BufferedReader(
 							new InputStreamReader(new FileInputStream(asmFile),
@@ -217,16 +236,17 @@ public class AsmFileFilter {
 	}
 
 	public static void main(String[] args) throws Exception {
-		String usageString = "Usage: AsmFileFilter <cmdFile> <asmFolder> <outputFolder> \n\n";
+		String usageString = "Usage: AsmFileFilter <mode> <asmFolder> <outputFolder> <cmdFile>\n\n";
 
-		usageString += "Where <cmdFile> = the path of assembly command files. Concatenate by '|' \n";
+		usageString += "Where <mode> = {assembly|subfpattern|origfpattern} \n";
 		usageString += "<asmFolder> = the path of asm files.\n";
 		usageString += "<outputFolder> = output folder for filtered files.\n";
+		usageString += "<cmdFile> = the path of assembly command files. Concatenate by '|'\n";
 
-		args = new String[3];
-		args[0] = "";
-		args[1] = "/home/markpeng/test/train_10samples";
-		args[2] = "/home/markpeng/test/train_10samples_filtered";
+		// args = new String[3];
+		// args[0] = "";
+		// args[1] = "/home/markpeng/test/train_10samples";
+		// args[2] = "/home/markpeng/test/train_10samples_filtered";
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/8086.txt|/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/80386.txt";
 		// args[1] =
@@ -234,21 +254,30 @@ public class AsmFileFilter {
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
 
-		if (args.length == 3) {
-			String cmdFile = args[0];
+		if (args.length > 3) {
+			String mode = args[0];
 			String asmFolder = args[1];
 			String outputFolder = args[2];
-			List<String> files = new ArrayList<String>();
-			if (cmdFile.contains("|")) {
-				String[] sp = cmdFile.split("\\|");
-				files = Arrays.asList(sp);
-			} else
-				files.add(cmdFile);
+			if (args.length == 3) {
+				AsmFileFilter worker = new AsmFileFilter();
+				if (mode.equals("subfpattern"))
+					worker.filterByPattern(asmFolder, outputFolder, true);
+				else if (mode.equals("origfpattern"))
+					worker.filterByPattern(asmFolder, outputFolder, false);
 
-			AsmFileFilter worker = new AsmFileFilter();
-			// List<String> cmds = worker.readAssemblyCommands(files);
-			// worker.filterByAssemblyCmds(cmds, asmFolder, outputFolder);
-			worker.filterByPattern(asmFolder, outputFolder);
+			} else {
+				String cmdFile = args[3];
+				List<String> files = new ArrayList<String>();
+				if (cmdFile.contains("|")) {
+					String[] sp = cmdFile.split("\\|");
+					files = Arrays.asList(sp);
+				} else
+					files.add(cmdFile);
+
+				AsmFileFilter worker = new AsmFileFilter();
+				List<String> cmds = worker.readAssemblyCommands(files);
+				worker.filterByAssemblyCmds(cmds, asmFolder, outputFolder);
+			}
 
 		} else {
 			System.out.println(usageString);
