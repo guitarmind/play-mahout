@@ -69,9 +69,12 @@ public class SparseFileTfIdfReader {
 
 	public static void main(String[] args) {
 		SparseFileTfIdfReader test = new SparseFileTfIdfReader();
+		// test.readMahoutSequenceFile(
+		// "/home/markpeng/test/mmc_train_10samples-vector/dictionary.file-0",
+		// "/home/markpeng/test/mmc_train_10samples-vector/tfidf-vectors/part-r-00000");
 		test.readMahoutSequenceFile(
-				"/home/markpeng/test/mmc_train_10samples-vector/dictionary.file-0",
-				"/home/markpeng/test/mmc_train_10samples-vector/tfidf-vectors/part-r-00000");
+				"/home/markpeng/test/train_10samples_filtered-vector/dictionary.file-0",
+				"/home/markpeng/test/train_10samples_filtered-vector/tfidf-vectors/part-r-00000");
 	}
 
 }

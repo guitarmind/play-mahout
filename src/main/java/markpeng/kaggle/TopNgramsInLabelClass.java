@@ -89,10 +89,10 @@ public class TopNgramsInLabelClass {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[4];
-		args[0] = "/home/markpeng/test/cnb_model";
-		args[1] = "/home/markpeng/test/cnb_labelindex";
-		args[2] = "/home/markpeng/test/mmc_train_10samples-vector/dictionary.file-0";
-		args[3] = "/home/markpeng/test/mmc_train_10samples-vector/df-count";
+		args[0] = "/home/markpeng/test/train_10samples_filtered_cnb_model";
+		args[1] = "/home/markpeng/test/train_10samples_filtered_cnb_labelindex";
+		args[2] = "/home/markpeng/test/train_10samples_filtered-vector/dictionary.file-0";
+		args[3] = "/home/markpeng/test/train_10samples_filtered-vector/df-count/part-r-00000";
 
 		if (args.length < 4) {
 			System.out
