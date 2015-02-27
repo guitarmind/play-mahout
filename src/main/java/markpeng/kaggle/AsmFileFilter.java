@@ -248,11 +248,12 @@ public class AsmFileFilter {
 		usageString += "<cmdFile> = the path of assembly command files. Concatenate by '|'\n";
 
 		// args = new String[3];
-		// args[0] = "";
+		// args[0] = "3";
 		// args[1] = "/home/markpeng/test/train_10samples";
 		// args[2] = "/home/markpeng/test/train_10samples_filtered";
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/8086.txt|/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/80386.txt";
+		// args[0] = "3";
 		// args[1] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
 		// args[2] =
