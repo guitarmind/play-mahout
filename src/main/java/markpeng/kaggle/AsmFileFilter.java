@@ -123,6 +123,7 @@ public class AsmFileFilter {
 
 	public void filterByPattern(String asmFileFolder, String outputFolder,
 			boolean subfolder) throws Exception {
+		int fileCount = 0;
 
 		File f = new File(outputFolder);
 		if (!f.exists())
@@ -228,17 +229,20 @@ public class AsmFileFilter {
 
 					System.out.println("Completed filtering file: "
 							+ filterFileName);
+					fileCount++;
 				} // end of for loop
 
 			}
 
 		} // end of label loop
+
+		System.out.println(fileCount + " files filtered.");
 	}
 
 	public static void main(String[] args) throws Exception {
 		String usageString = "Usage: AsmFileFilter <mode> <asmFolder> <outputFolder> <cmdFile>\n\n";
 
-		usageString += "Where <mode> = {assembly|subfpattern|origfpattern} \n";
+		usageString += "Where <mode> = {1=assembly|2=subfolder pattern|3=original folder pattern} \n";
 		usageString += "<asmFolder> = the path of asm files.\n";
 		usageString += "<outputFolder> = output folder for filtered files.\n";
 		usageString += "<cmdFile> = the path of assembly command files. Concatenate by '|'\n";
@@ -254,15 +258,15 @@ public class AsmFileFilter {
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
 
-		if (args.length > 3) {
+		if (args.length >= 3) {
 			String mode = args[0];
 			String asmFolder = args[1];
 			String outputFolder = args[2];
 			if (args.length == 3) {
 				AsmFileFilter worker = new AsmFileFilter();
-				if (mode.equals("subfpattern"))
+				if (mode.equals("2"))
 					worker.filterByPattern(asmFolder, outputFolder, true);
-				else if (mode.equals("origfpattern"))
+				else if (mode.equals("3"))
 					worker.filterByPattern(asmFolder, outputFolder, false);
 
 			} else {
