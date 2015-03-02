@@ -43,6 +43,9 @@ public class NaiveBayesPredictor {
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
+	private static final int MAX_NGRAM = 2;
+	private static final int MIN_DF = 2;
+
 	public static Map<String, Integer> readDictionary(Configuration conf,
 			String dictionaryPath) {
 		Map<String, Integer> dictionnary = new HashMap<String, Integer>();
@@ -206,7 +209,7 @@ public class NaiveBayesPredictor {
 								Version.LUCENE_46, new StringReader(
 										text.toString()));
 						// get n-gram filter (N=2)
-						ts = new ShingleFilter(ts, 2, 2);
+						ts = new ShingleFilter(ts, MAX_NGRAM, MAX_NGRAM);
 						CharTermAttribute termAtt = ts
 								.addAttribute(CharTermAttribute.class);
 						ts.reset();
@@ -238,6 +241,8 @@ public class NaiveBayesPredictor {
 							Integer wordId = dictionary.get(word);
 							// DF
 							Long freq = documentFrequency.get(wordId);
+							if (freq < MIN_DF)
+								continue;
 							double tfIdfValue = tfidf.calculate(count,
 									freq.intValue(), wordCount, documentCount);
 							vector.setQuick(wordId, tfIdfValue);
