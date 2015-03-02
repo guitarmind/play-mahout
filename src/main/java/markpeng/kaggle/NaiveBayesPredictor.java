@@ -41,27 +41,59 @@ public class NaiveBayesPredictor {
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
-	public static Map<String, Integer> readDictionnary(Configuration conf,
-			Path dictionnaryPath) {
+	public static Map<String, Integer> readDictionary(Configuration conf,
+			String dictionaryPath) {
 		Map<String, Integer> dictionnary = new HashMap<String, Integer>();
 
 		System.out.println("Loading word dictionary file ......");
-		for (Pair<Text, IntWritable> pair : new SequenceFileIterable<Text, IntWritable>(
-				dictionnaryPath, true, conf)) {
-			dictionnary.put(pair.getFirst().toString(), pair.getSecond().get());
+
+		File checker = new File(dictionaryPath);
+		if (checker.isDirectory()) {
+			for (final File fileEntry : checker.listFiles()) {
+				if (fileEntry.getName().startsWith("dictionary.file-")) {
+					String filePath = fileEntry.getAbsolutePath();
+					for (Pair<Text, IntWritable> pair : new SequenceFileIterable<Text, IntWritable>(
+							new Path(filePath), true, conf)) {
+						dictionnary.put(pair.getFirst().toString(), pair
+								.getSecond().get());
+					}
+				}
+			}
+		} else {
+			for (Pair<Text, IntWritable> pair : new SequenceFileIterable<Text, IntWritable>(
+					new Path(dictionaryPath), true, conf)) {
+				dictionnary.put(pair.getFirst().toString(), pair.getSecond()
+						.get());
+			}
 		}
+
 		return dictionnary;
 	}
 
 	public static Map<Integer, Long> readDocumentFrequency(Configuration conf,
-			Path documentFrequencyPath) {
+			String documentFrequencyPath) {
 		Map<Integer, Long> documentFrequency = new HashMap<Integer, Long>();
 
 		System.out.println("Loading document frequency file ......");
-		for (Pair<IntWritable, LongWritable> pair : new SequenceFileIterable<IntWritable, LongWritable>(
-				documentFrequencyPath, true, conf)) {
-			documentFrequency
-					.put(pair.getFirst().get(), pair.getSecond().get());
+
+		File checker = new File(documentFrequencyPath);
+		if (checker.isDirectory()) {
+			for (final File fileEntry : checker.listFiles()) {
+				if (fileEntry.getName().startsWith("part-r-")) {
+					String filePath = fileEntry.getAbsolutePath();
+					for (Pair<IntWritable, LongWritable> pair : new SequenceFileIterable<IntWritable, LongWritable>(
+							new Path(filePath), true, conf)) {
+						documentFrequency.put(pair.getFirst().get(), pair
+								.getSecond().get());
+					}
+				}
+			}
+		} else {
+			for (Pair<IntWritable, LongWritable> pair : new SequenceFileIterable<IntWritable, LongWritable>(
+					new Path(documentFrequencyPath), true, conf)) {
+				documentFrequency.put(pair.getFirst().get(), pair.getSecond()
+						.get());
+			}
 		}
 		return documentFrequency;
 	}
@@ -71,8 +103,8 @@ public class NaiveBayesPredictor {
 		args = new String[6];
 		args[0] = "/home/markpeng/test/cnb_model";
 		args[1] = "/home/markpeng/test/cnb_labelindex";
-		args[2] = "/home/markpeng/test/train_10samples_filtered-vector/dictionary.file-0";
-		args[3] = "/home/markpeng/test/train_10samples_filtered-vector/df-count/part-r-00000";
+		args[2] = "/home/markpeng/test/train_10samples_filtered-vector";
+		args[3] = "/home/markpeng/test/train_10samples_filtered-vector/df-count";
 		args[4] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
 		args[5] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
 		// args[0] =
@@ -113,11 +145,11 @@ public class NaiveBayesPredictor {
 			Map<Integer, String> labels = BayesUtils.readLabelIndex(
 					configuration, new Path(labelIndexPath));
 			// word => word_id
-			Map<String, Integer> dictionary = readDictionnary(configuration,
-					new Path(dictionaryPath));
+			Map<String, Integer> dictionary = readDictionary(configuration,
+					dictionaryPath);
 			// word_id => DF
 			Map<Integer, Long> documentFrequency = readDocumentFrequency(
-					configuration, new Path(documentFrequencyPath));
+					configuration, documentFrequencyPath);
 			int labelCount = labels.size();
 			int documentCount = documentFrequency.get(-1).intValue();
 			System.out.println("Number of labels: " + labelCount);
