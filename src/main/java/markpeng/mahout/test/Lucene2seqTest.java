@@ -1,6 +1,5 @@
 package markpeng.mahout.test;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
@@ -9,8 +8,6 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.search.TermQuery;
 import org.apache.mahout.text.LuceneStorageConfiguration;
 import org.apache.mahout.text.SequenceFilesFromLuceneStorage;
-import org.apache.mahout.text.SequenceFilesFromLuceneStorageDriver;
-import org.apache.mahout.text.SequenceFilesFromLuceneStorageMRJob;
 
 /**
  * Reference:
