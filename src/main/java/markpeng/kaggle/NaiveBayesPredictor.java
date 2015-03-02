@@ -69,12 +69,24 @@ public class NaiveBayesPredictor {
 	public static void main(String[] args) throws Exception {
 
 		args = new String[6];
-		args[0] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/mmc_train_filtered_cnb_model";
-		args[1] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/mmc_train_filtered_cnb_labelindex";
-		args[2] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/dictionary.file-0";
-		args[3] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/df-count";
+		args[0] = "/home/markpeng/test/cnb_model";
+		args[1] = "/home/markpeng/test/cnb_labelindex";
+		args[2] = "/home/markpeng/test/train_10samples_filtered-vector/dictionary.file-0";
+		args[3] = "/home/markpeng/test/train_10samples_filtered-vector/df-count/part-r-00000";
 		args[4] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
 		args[5] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/mmc_train_filtered_cnb_model";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/mmc_train_filtered_cnb_labelindex";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/dictionary.file-0";
+		// args[3] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/df-count";
+		// args[4] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
+		// args[5] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
 
 		if (args.length < 6) {
 			System.out
@@ -126,6 +138,13 @@ public class NaiveBayesPredictor {
 					new FileOutputStream(csvFilePath, false), "UTF-8"));
 			try {
 
+				// write header
+				outputStr
+						.append("\"Id\",\"Prediction1\",\"Prediction2\",\"Prediction3\","
+								+ "\"Prediction4\",\"Prediction5\",\"Prediction6\","
+								+ "\"Prediction7\",\"Prediction8\",\"Prediction9\""
+								+ newLine);
+
 				for (String asmFile : asmFiles) {
 					File f = new File(asmFile);
 					String fileName = f.getName().replace(".asm_filtered", "")
@@ -137,13 +156,6 @@ public class NaiveBayesPredictor {
 					// read test file content
 					BufferedReader reader = new BufferedReader(new FileReader(
 							asmFile));
-
-					// write header
-					outputStr
-							.append("\"Id\",\"Prediction1\",\"Prediction2\",\"Prediction3\","
-									+ "\"Prediction4\",\"Prediction5\",\"Prediction6\","
-									+ "\"Prediction7\",\"Prediction8\",\"Prediction9\""
-									+ newLine);
 
 					try {
 
@@ -198,23 +210,37 @@ public class NaiveBayesPredictor {
 						Vector resultVector = classifier.classifyFull(vector);
 						double bestScore = -Double.MAX_VALUE;
 						int bestCategoryId = -1;
+						double sumlnorm = 0.0;
 						for (Element element : resultVector.all()) {
 							int categoryId = element.index();
 							double score = element.get();
+							double lnormScore = Math.log(score);
 
-							map.put(categoryId, score);
+							// use log normalization
+							map.put(categoryId, lnormScore);
 
 							if (score > bestScore) {
 								bestScore = score;
 								bestCategoryId = categoryId;
 							}
+
+							sumlnorm += lnormScore;
 						}
-						System.out.println(" => " + labels.get(bestCategoryId));
+						System.out.println(fileName + " => "
+								+ labels.get(bestCategoryId));
 
 						// write to csv
 						outputStr.append("\"" + fileName + "\",");
+						int count = 0;
 						for (Integer id : map.keySet()) {
-							outputStr.append(labels.get(id) + ",");
+							double score = (double) map.get(id) / sumlnorm;
+							// divided by sum
+
+							if (count < map.size() - 1)
+								outputStr.append(score + ",");
+							else
+								outputStr.append(score);
+							count++;
 						}
 						outputStr.append(newLine);
 						if (outputStr.length() >= BUFFER_LENGTH) {
