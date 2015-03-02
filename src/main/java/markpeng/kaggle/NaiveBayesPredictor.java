@@ -100,13 +100,16 @@ public class NaiveBayesPredictor {
 
 	public static void main(String[] args) throws Exception {
 
-		args = new String[6];
-		args[0] = "/home/markpeng/test/cnb_model";
-		args[1] = "/home/markpeng/test/cnb_labelindex";
-		args[2] = "/home/markpeng/test/train_10samples_filtered-vector";
-		args[3] = "/home/markpeng/test/train_10samples_filtered-vector/df-count";
-		args[4] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
-		args[5] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
+		// args = new String[6];
+		// args[0] = "/home/markpeng/test/cnb_model";
+		// args[1] = "/home/markpeng/test/cnb_labelindex";
+		// args[2] = "/home/markpeng/test/train_10samples_filtered-vector";
+		// args[3] =
+		// "/home/markpeng/test/train_10samples_filtered-vector/df-count";
+		// args[4] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
+		// args[5] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/result/mmc_train_filtered_cnb_model";
 		// args[1] =
@@ -241,22 +244,26 @@ public class NaiveBayesPredictor {
 						TreeMap<Integer, Double> map = new TreeMap<Integer, Double>();
 						Vector resultVector = classifier.classifyFull(vector);
 						double bestScore = -Double.MAX_VALUE;
+						double minScore = Double.MAX_VALUE;
 						int bestCategoryId = -1;
-						double sumlnorm = 0.0;
+						// double sumlnorm = 0.0;
 						for (Element element : resultVector.all()) {
 							int categoryId = element.index();
 							double score = element.get();
-							double lnormScore = Math.log(score);
+							// double lnormScore = Math.log(score);
 
 							// use log normalization
-							map.put(categoryId, lnormScore);
+							map.put(categoryId, score);
 
 							if (score > bestScore) {
 								bestScore = score;
 								bestCategoryId = categoryId;
 							}
 
-							sumlnorm += lnormScore;
+							if (score < minScore)
+								minScore = score;
+
+							// sumlnorm += score;
 						}
 						System.out.println(fileName + " => "
 								+ labels.get(bestCategoryId));
@@ -265,8 +272,18 @@ public class NaiveBayesPredictor {
 						outputStr.append("\"" + fileName + "\",");
 						int count = 0;
 						for (Integer id : map.keySet()) {
-							double score = (double) map.get(id) / sumlnorm;
+							// double score = (double) map.get(id) / sumlnorm;
 							// divided by sum
+
+							double score = map.get(id);
+
+							// max-min normalization
+							score = (double) (score - minScore)
+									/ (bestScore - minScore);
+
+							// use equal probability if not valid
+							if (Double.isInfinite(score) || Double.isNaN(score))
+								score = (double) 1 / 9;
 
 							if (count < map.size() - 1)
 								outputStr.append(score + ",");
