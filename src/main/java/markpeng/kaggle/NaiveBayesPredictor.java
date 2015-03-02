@@ -20,7 +20,9 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 import org.apache.mahout.classifier.naivebayes.BayesUtils;
@@ -185,9 +187,6 @@ public class NaiveBayesPredictor {
 					String fileName = f.getName().replace(".asm_filtered", "")
 							.trim();
 
-					// analyzer used to extract word from file
-					Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_46);
-
 					// read test file content
 					BufferedReader reader = new BufferedReader(new FileReader(
 							asmFile));
@@ -203,8 +202,11 @@ public class NaiveBayesPredictor {
 						Multiset<String> words = ConcurrentHashMultiset
 								.create();
 						// extract words from current line
-						TokenStream ts = analyzer.tokenStream("text",
-								new StringReader(text.toString()));
+						TokenStream ts = new StandardTokenizer(
+								Version.LUCENE_46, new StringReader(
+										text.toString()));
+						// get n-gram filter (N=2)
+						ts = new ShingleFilter(ts, 2, 2);
 						CharTermAttribute termAtt = ts
 								.addAttribute(CharTermAttribute.class);
 						ts.reset();
@@ -217,6 +219,8 @@ public class NaiveBayesPredictor {
 								if (wordId != null) {
 									words.add(word);
 									wordCount++;
+
+									// System.out.println(word);
 								}
 							}
 						}
@@ -299,7 +303,6 @@ public class NaiveBayesPredictor {
 						}
 
 					} finally {
-						analyzer.close();
 						reader.close();
 					}
 				} // end of asm file loop
