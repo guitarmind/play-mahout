@@ -3,57 +3,24 @@ package markpeng.kaggle;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.text.DecimalFormat;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.mahout.common.Pair;
-import org.apache.mahout.common.iterator.sequencefile.SequenceFileIterable;
 import org.apache.mahout.math.NamedVector;
 import org.apache.mahout.math.SequentialAccessSparseVector;
-import org.apache.mahout.math.VectorWritable;
 import org.apache.mahout.math.Vector.Element;
+import org.apache.mahout.math.VectorWritable;
 
 public class TfIdfVectorToCsv {
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
-
-	public static class WordWeight implements Comparable<WordWeight> {
-		private int wordId;
-		private double weight;
-
-		public WordWeight(int wordId, double weight) {
-			this.wordId = wordId;
-			this.weight = weight;
-		}
-
-		public int getWordId() {
-			return wordId;
-		}
-
-		public Double getWeight() {
-			return weight;
-		}
-
-		@Override
-		public int compareTo(WordWeight w) {
-			return -getWeight().compareTo(w.getWeight());
-		}
-	}
+	private static final DecimalFormat formatter = new DecimalFormat("#.#####");
 
 	public static void main(String[] args) throws Exception {
 		if (args.length < 2) {
@@ -101,8 +68,8 @@ public class TfIdfVectorToCsv {
 									Element e = looper.next();
 									int word_id = e.index();
 									double tfidf = e.get();
-									outputStr.append(word_id + ":" + tfidf
-											+ " ");
+									outputStr.append(word_id + ":"
+											+ formatter.format(tfidf) + " ");
 								}
 
 								outputStr.append(newLine);
