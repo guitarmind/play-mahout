@@ -207,7 +207,7 @@ public class NaiveBayesPredictor {
 								Version.LUCENE_46, new StringReader(
 										text.toString()));
 						// get n-gram filter (N=2)
-						ts = new ShingleFilter(ts, MAX_NGRAM, MAX_NGRAM);
+						// ts = new ShingleFilter(ts, MAX_NGRAM, MAX_NGRAM);
 						CharTermAttribute termAtt = ts
 								.addAttribute(CharTermAttribute.class);
 						ts.reset();
@@ -252,12 +252,12 @@ public class NaiveBayesPredictor {
 						Vector resultVector = classifier.classifyFull(vector);
 						double bestScore = -Double.MAX_VALUE;
 						double minScore = Double.MAX_VALUE;
+						double sumScore = -1;
 						int bestCategoryId = -1;
-						// double sumlnorm = 0.0;
+
 						for (Element element : resultVector.all()) {
 							int categoryId = element.index();
 							double score = element.get();
-							// double lnormScore = Math.log(score);
 
 							// use log normalization
 							map.put(categoryId, score);
@@ -270,27 +270,57 @@ public class NaiveBayesPredictor {
 							if (score < minScore)
 								minScore = score;
 
-							// sumlnorm += score;
+							sumScore += score;
 						}
 						System.out.println(fileName + " => "
 								+ labels.get(bestCategoryId));
+
+						// compute Euclidean length of the vector
+						// double unitLength = 0;
+						// for (Integer id : map.keySet()) {
+						// double score = map.get(id);
+						//
+						// // normalize by mean score
+						// unitLength += Math.pow(score, 2);
+						// }
+						// unitLength = Math.sqrt(unitLength);
+
+						// compuate mean and sd
+						// double mean = 0;
+						// double sd = 0;
+						// for (Integer id : map.keySet()) {
+						// double score = map.get(id);
+						// mean += score;
+						// }
+						// mean = mean / 9;
+						// for (Integer id : map.keySet()) {
+						// double score = map.get(id);
+						// sd += Math.pow(score - mean, 2);
+						// }
+						// sd = sd / 9;
+						// sd = Math.sqrt(sd);
 
 						// write to csv
 						outputStr.append("\"" + fileName + "\",");
 						int count = 0;
 						for (Integer id : map.keySet()) {
-							// double score = (double) map.get(id) / sumlnorm;
-							// divided by sum
-
 							double score = map.get(id);
+
+							// normalize by standard score
+							// score = (double) (score - mean) / sd;
+
+							// normalize by unit vector length
+							// score = (double) score / unitLength;
 
 							// max-min normalization
 							score = (double) (score - minScore)
 									/ (bestScore - minScore);
 
 							// use equal probability if not valid
-							if (Double.isInfinite(score) || Double.isNaN(score))
-								score = (double) 1 / 9;
+							if (Double.isInfinite(score) || Double.isNaN(score)
+									|| score == 0)
+								score = 0.5;
+							// score = (double) 1 / 9;
 
 							if (count < map.size() - 1)
 								outputStr.append(score + ",");
