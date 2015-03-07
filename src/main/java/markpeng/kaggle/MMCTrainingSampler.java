@@ -54,7 +54,8 @@ public class MMCTrainingSampler {
 	}
 
 	public void generateTrainFoldersByLabel(String trainLabelFile,
-			String trainFileFoler, String outputFolder) throws Exception {
+			String trainFileFoler, String outputFolder, String fileType)
+			throws Exception {
 		Hashtable<String, List<String>> output = readTrainLabel(trainLabelFile);
 
 		for (String label : output.keySet()) {
@@ -63,11 +64,12 @@ public class MMCTrainingSampler {
 			f.mkdir();
 
 			List<String> tmp = output.get(label);
-			for (String asm : tmp) {
-				copyFileUsingJava7Files(new File(trainFileFoler + "/" + asm
-						+ ".asm"), new File(folderName + "/" + asm + ".asm"));
+			for (String file : tmp) {
+				copyFileUsingJava7Files(new File(trainFileFoler + "/" + file
+						+ "." + fileType), new File(folderName + "/" + file
+						+ "." + fileType));
 
-				System.out.println(asm + " completed.");
+				System.out.println(file + " completed.");
 			}
 
 			System.out.println(label + ": " + tmp.size() + " files completed.");
@@ -146,15 +148,15 @@ public class MMCTrainingSampler {
 		// ---------------------------------------------------------------------------------------------
 		// Get sample dateset randomly from splitted train dataset
 
-		MMCTrainingSampler test = new MMCTrainingSampler();
-		test.generateSampleTrainFolder(args[0], args[1], args[2],
-				Integer.parseInt(args[3]));
+		// MMCTrainingSampler test = new MMCTrainingSampler();
+		// test.generateSampleTrainFolder(args[0], args[1], args[2],
+		// Integer.parseInt(args[3]));
 
 		// ---------------------------------------------------------------------------------------------
 		// Split original train dataset
 
-		// MMCTrainingSampler test = new MMCTrainingSampler();
-		// test.generateTrainFoldersByLabel(args[0], args[1], args[2]);
+		MMCTrainingSampler test = new MMCTrainingSampler();
+		test.generateTrainFoldersByLabel(args[0], args[1], args[2], args[3]);
 
 		// ---------------------------------------------------------------------------------------------
 		// Test Case
