@@ -48,6 +48,7 @@ public class SparseFileTfIdfReader {
 			while (read.next(key, value)) {
 				NamedVector namedVector = (NamedVector) value.get();
 				vect = (SequentialAccessSparseVector) namedVector.getDelegate();
+				String name = namedVector.getName();
 
 				Iterator<Element> looper = vect.iterator();
 				while (looper.hasNext()) {
