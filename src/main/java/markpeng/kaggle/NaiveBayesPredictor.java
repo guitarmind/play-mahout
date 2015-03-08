@@ -348,15 +348,13 @@ public class NaiveBayesPredictor {
 							// score = (double) score / unitLength;
 
 							// max-min normalization
-							// score = (double) (score - minScore)
-							// / (bestScore - minScore);
+							score = (double) (score - minScore)
+									/ (bestScore - minScore);
 
 							// use equal probability if not valid
-							// if (Double.isInfinite(score) ||
-							// Double.isNaN(score)
-							// || score == 0)
-							// score = 0.5;
-							// score = (double) 1 / 9;
+							if (Double.isInfinite(score) || Double.isNaN(score)
+									|| score == 0)
+								score = (double) 1 / 9;
 
 							if (count < map.size() - 1)
 								outputStr.append(score + ",");
