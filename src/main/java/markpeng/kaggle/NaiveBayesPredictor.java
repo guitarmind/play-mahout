@@ -19,8 +19,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
 import org.apache.lucene.analysis.shingle.ShingleFilter;
-import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 import org.apache.mahout.classifier.naivebayes.BayesUtils;
@@ -43,6 +43,7 @@ public class NaiveBayesPredictor {
 
 	private static final int MAX_NGRAM = 2;
 	private static final int MIN_DF = 2;
+	private static final double MAX_DF_PERCENT = 0.85;
 
 	public static Map<String, Integer> readDictionary(Configuration conf,
 			String dictionaryPath) {
@@ -126,17 +127,18 @@ public class NaiveBayesPredictor {
 		// args[5] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
 
-		if (args.length < 6) {
+		if (args.length < 7) {
 			System.out
-					.println("Arguments: [model] [label index] [dictionnary] [document frequency] [test folder] [output csv]");
+					.println("Arguments: [model] [fileType] [label index] [dictionnary] [document frequency] [test folder] [output csv]");
 			return;
 		}
 		String modelPath = args[0];
-		String labelIndexPath = args[1];
-		String dictionaryPath = args[2];
-		String documentFrequencyPath = args[3];
-		String testFolderPath = args[4];
-		String csvFilePath = args[5];
+		String fileType = args[1];
+		String labelIndexPath = args[2];
+		String dictionaryPath = args[3];
+		String documentFrequencyPath = args[4];
+		String testFolderPath = args[5];
+		String csvFilePath = args[6];
 
 		File checker = new File(testFolderPath);
 		if (checker.exists()) {
@@ -165,7 +167,7 @@ public class NaiveBayesPredictor {
 			// get all test file path
 			List<String> asmFiles = new ArrayList<String>();
 			for (final File fileEntry : checker.listFiles()) {
-				if (fileEntry.getName().contains(".asm_filtered")) {
+				if (fileEntry.getName().contains("." + fileType + "_filtered")) {
 					String tmp = fileEntry.getAbsolutePath();
 					asmFiles.add(tmp);
 				}
@@ -185,8 +187,8 @@ public class NaiveBayesPredictor {
 
 				for (String asmFile : asmFiles) {
 					File f = new File(asmFile);
-					String fileName = f.getName().replace(".asm_filtered", "")
-							.trim();
+					String fileName = f.getName()
+							.replace("." + fileType + "_filtered", "").trim();
 
 					// read test file content
 					BufferedReader reader = new BufferedReader(new FileReader(
@@ -203,11 +205,14 @@ public class NaiveBayesPredictor {
 						Multiset<String> words = ConcurrentHashMultiset
 								.create();
 						// extract words from current line
-						TokenStream ts = new StandardTokenizer(
+						TokenStream ts = new WhitespaceTokenizer(
 								Version.LUCENE_46, new StringReader(
 										text.toString()));
+						// TokenStream ts = new StandardTokenizer(
+						// Version.LUCENE_46, new StringReader(
+						// text.toString()));
 						// get n-gram filter (N=2)
-						// ts = new ShingleFilter(ts, MAX_NGRAM, MAX_NGRAM);
+						ts = new ShingleFilter(ts, MAX_NGRAM, MAX_NGRAM);
 						CharTermAttribute termAtt = ts
 								.addAttribute(CharTermAttribute.class);
 						ts.reset();
@@ -232,6 +237,7 @@ public class NaiveBayesPredictor {
 						// create vector wordId => weight using tfidf
 						Vector vector = new RandomAccessSparseVector(100000);
 						TFIDF tfidf = new TFIDF();
+						int l2norm = 0;
 						for (Multiset.Entry<String> entry : words.entrySet()) {
 							String word = entry.getElement();
 							// TF
@@ -241,10 +247,39 @@ public class NaiveBayesPredictor {
 							Long freq = documentFrequency.get(wordId);
 							if (freq < MIN_DF)
 								continue;
+							if (((double) freq / documentCount) >= MAX_DF_PERCENT)
+								continue;
+
+							// it ignores wordCount (length)
+							// TF => Math.sqrt(freq)
+							// IDF => Math.log(numDocs/(double)(docFreq+1))+1.0
 							double tfIdfValue = tfidf.calculate(count,
 									freq.intValue(), wordCount, documentCount);
+							l2norm += Math.pow(tfIdfValue, 2);
+						}
+						for (Multiset.Entry<String> entry : words.entrySet()) {
+							String word = entry.getElement();
+							// TF
+							int count = entry.getCount();
+							Integer wordId = dictionary.get(word);
+							// DF
+							Long freq = documentFrequency.get(wordId);
+							if (freq < MIN_DF)
+								continue;
+							if (((double) freq / documentCount) >= MAX_DF_PERCENT)
+								continue;
+
+							// it ignores wordCount (length)
+							// TF => Math.sqrt(freq)
+							// IDF => Math.log(numDocs/(double)(docFreq+1))+1.0
+							double tfIdfValue = tfidf.calculate(count,
+									freq.intValue(), wordCount, documentCount);
+							// enforce L2 Euclidean norm
+							tfIdfValue = (double) tfIdfValue
+									/ Math.sqrt(l2norm);
 							vector.setQuick(wordId, tfIdfValue);
 						}
+
 						// With the classifier, we get one score for each label
 						// The label with the highest score is the one the file
 						// is more likely to be associated to\
@@ -319,8 +354,7 @@ public class NaiveBayesPredictor {
 							// use equal probability if not valid
 							if (Double.isInfinite(score) || Double.isNaN(score)
 									|| score == 0)
-								score = 0.5;
-							// score = (double) 1 / 9;
+								score = (double) 1 / 9;
 
 							if (count < map.size() - 1)
 								outputStr.append(score + ",");
