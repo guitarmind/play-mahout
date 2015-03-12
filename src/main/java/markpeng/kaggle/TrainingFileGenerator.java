@@ -80,7 +80,8 @@ public class TrainingFileGenerator {
 	}
 
 	public void generatCSV(String trainLabelFile, String trainFolder,
-			String featureFile, String outputCsv) throws Exception {
+			String featureFile, String outputCsv, String fileType)
+			throws Exception {
 		List<String> features = readFeatureLabel(featureFile);
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
@@ -95,8 +96,8 @@ public class TrainingFileGenerator {
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
-					File f = new File(folderName + "/" + file
-							+ ".bytes_filtered");
+					File f = new File(folderName + "/" + file + "." + fileType
+							+ "_filtered");
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
@@ -118,16 +119,18 @@ public class TrainingFileGenerator {
 						// check if each feature exists
 						int index = 0;
 						for (String feature : features) {
+							int termFreq = countTermFreq(feature, content);
+
 							if (index < features.size() - 1) {
 								if (content.contains(feature))
-									resultStr.append("1,");
+									resultStr.append(termFreq + ",");
 								else
-									resultStr.append("0,");
+									resultStr.append(termFreq + ",");
 							} else {
 								if (content.contains(feature))
-									resultStr.append("1" + newLine);
+									resultStr.append(termFreq + newLine);
 								else
-									resultStr.append("0" + newLine);
+									resultStr.append(termFreq + newLine);
 							}
 
 							index++;
@@ -153,7 +156,8 @@ public class TrainingFileGenerator {
 	}
 
 	public void generateLibsvm(String trainLabelFile, String trainFolder,
-			String featureFile, String outputCsv) throws Exception {
+			String featureFile, String outputCsv, String fileType)
+			throws Exception {
 		List<String> features = readFeatureLabel(featureFile);
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
@@ -168,8 +172,8 @@ public class TrainingFileGenerator {
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
-					File f = new File(folderName + "/" + file
-							+ ".bytes_filtered");
+					File f = new File(folderName + "/" + file + "." + fileType
+							+ "_filtered");
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
@@ -249,9 +253,9 @@ public class TrainingFileGenerator {
 		// args[4] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/train_feature_boolvector.csv";
 
-		if (args.length < 5) {
+		if (args.length < 6) {
 			System.out
-					.println("Arguments: [model{csv|libsvm}] [train folder] [train label file] [feature file] [output csv]");
+					.println("Arguments: [model{csv|libsvm}] [train folder] [train label file] [feature file] [output csv] [file type]");
 			return;
 		}
 		String mode = args[0];
@@ -259,13 +263,14 @@ public class TrainingFileGenerator {
 		String trainLabelFile = args[2];
 		String featureFile = args[3];
 		String outputCsv = args[4];
+		String fileType = args[5];
 		TrainingFileGenerator worker = new TrainingFileGenerator();
 		if (mode.equals("csv"))
 			worker.generatCSV(trainLabelFile, trainFolder, featureFile,
-					outputCsv);
+					outputCsv, fileType);
 		else if (mode.equals("libsvm"))
 			worker.generateLibsvm(trainLabelFile, trainFolder, featureFile,
-					outputCsv);
+					outputCsv, fileType);
 
 	}
 }
