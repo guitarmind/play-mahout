@@ -10,6 +10,8 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TrainingFileGenerator {
 
@@ -189,12 +191,18 @@ public class TrainingFileGenerator {
 						// check if each feature exists
 						int index = 0;
 						for (String feature : features) {
+							int termFreq = countTermFreq(feature, content);
+
 							if (index < features.size() - 1) {
 								if (content.contains(feature))
-									resultStr.append(index + ":1 ");
+									resultStr.append(index + ":" + termFreq
+											+ " ");
+								// resultStr.append(index + ":1 ");
 							} else {
 								if (content.contains(feature))
-									resultStr.append(index + ":1 " + newLine);
+									resultStr.append(index + ":" + termFreq
+											+ " " + newLine);
+								// resultStr.append(index + ":1 " + newLine);
 							}
 
 							index++;
@@ -217,6 +225,15 @@ public class TrainingFileGenerator {
 			out.flush();
 			out.close();
 		}
+	}
+
+	private int countTermFreq(String word, String text) {
+		Pattern pattern = Pattern.compile(word);
+		Matcher matcher = pattern.matcher(text);
+		int counter = 0;
+		while (matcher.find())
+			counter++;
+		return counter;
 	}
 
 	public static void main(String[] args) throws Exception {
