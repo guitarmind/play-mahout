@@ -50,7 +50,7 @@ public class LibSVMPredictionParser {
 			try {
 				String aLine = null;
 				while ((aLine = in.readLine()) != null) {
-					String tmp = aLine.toLowerCase().trim();
+					String tmp = aLine.trim();
 					if (tmp.length() > 0) {
 						fileNames.add(tmp);
 					}
@@ -86,7 +86,7 @@ public class LibSVMPredictionParser {
 						// skip first token (prediction label)
 						for (int j = 9; j > 0; j--) {
 							double prob = Double.parseDouble(tokens[j]);
-							if (i > 1)
+							if (j > 1)
 								outputStr.append(prob + ",");
 							else
 								outputStr.append(prob);
