@@ -19,7 +19,7 @@ public class LibSVMPredictionParser {
 		// args = new String[3];
 		// args[0] = "test_full_asm_cmdfunc_20150315.libsvm.scale.predict";
 		// args[1] = "test_full_asm_cmdfunc_20150315.index";
-		// args[2] = "test_full_asm_cmdfunc_20150315_libsvm.csv";
+		// args[2] = "test_full_asm_cmdfunc_20150315.libsvm.csv";
 
 		if (args.length < 3) {
 			System.out
