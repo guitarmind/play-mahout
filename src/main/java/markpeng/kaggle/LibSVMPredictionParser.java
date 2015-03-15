@@ -2,41 +2,12 @@ package markpeng.kaggle;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.core.WhitespaceTokenizer;
-import org.apache.lucene.analysis.shingle.ShingleFilter;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.util.Version;
-import org.apache.mahout.classifier.naivebayes.BayesUtils;
-import org.apache.mahout.classifier.naivebayes.ComplementaryNaiveBayesClassifier;
-import org.apache.mahout.classifier.naivebayes.NaiveBayesModel;
-import org.apache.mahout.common.Pair;
-import org.apache.mahout.common.iterator.sequencefile.SequenceFileIterable;
-import org.apache.mahout.math.RandomAccessSparseVector;
-import org.apache.mahout.math.Vector;
-import org.apache.mahout.math.Vector.Element;
-import org.apache.mahout.vectorizer.TFIDF;
-
-import com.google.common.collect.ConcurrentHashMultiset;
-import com.google.common.collect.Multiset;
 
 public class LibSVMPredictionParser {
 
@@ -45,10 +16,10 @@ public class LibSVMPredictionParser {
 
 	public static void main(String[] args) throws Exception {
 
-		// args = new String[6];
-		// args[0] = "/home/markpeng/test/cnb_model";
-		// args[1] = "/home/markpeng/test/cnb_labelindex";
-		// args[2] = "/home/markpeng/test/train_10samples_filtered-vector";
+		// args = new String[3];
+		// args[0] = "test_full_asm_cmdfunc_20150315.libsvm.scale.predict";
+		// args[1] = "test_full_asm_cmdfunc_20150315.index";
+		// args[2] = "test_full_asm_cmdfunc_20150315_libsvm.csv";
 
 		if (args.length < 3) {
 			System.out
@@ -106,15 +77,33 @@ public class LibSVMPredictionParser {
 
 			if (predictions.size() == fileNames.size()) {
 				for (int i = 0; i < predictions.size(); i++) {
+					String fileName = fileNames.get(i);
+					String output = predictions.get(i);
+					String[] tokens = output.split("\\s");
+					if (tokens.length == 10) {
+						outputStr.append(fileName + ",");
 
-					outputStr.append(newLine);
-					if (outputStr.length() >= BUFFER_LENGTH) {
-						out.write(outputStr.toString());
-						out.flush();
-						outputStr.setLength(0);
+						// skip first token (prediction label)
+						for (int j = 9; j > 0; j--) {
+							double prob = Double.parseDouble(tokens[j]);
+							if (i > 1)
+								outputStr.append(prob + ",");
+							else
+								outputStr.append(prob);
+						}
+
+						outputStr.append(newLine);
+						if (outputStr.length() >= BUFFER_LENGTH) {
+							out.write(outputStr.toString());
+							out.flush();
+							outputStr.setLength(0);
+						}
 					}
 				}
-			}
+			} else
+				System.out.println("WRONG!! predictions.size(): "
+						+ predictions.size() + ", fileNames.size(): "
+						+ fileNames.size());
 
 		} finally {
 			out.write(outputStr.toString());
