@@ -86,6 +86,12 @@ public class TrainingFileGenerator {
 			}
 		}
 
+		// extra features
+		if (!features.contains("db"))
+			features.add("db");
+		if (!features.contains("dd"))
+			features.add("dd");
+
 		return features;
 	}
 
@@ -161,10 +167,7 @@ public class TrainingFileGenerator {
 							if (tfMap.containsKey(feature))
 								termFreq = tfMap.get(feature);
 
-							if (content.contains(feature))
-								resultStr.append(termFreq + ",");
-							else
-								resultStr.append(termFreq + ",");
+							resultStr.append(termFreq + ",");
 
 						} // end of feature loop
 
@@ -194,7 +197,7 @@ public class TrainingFileGenerator {
 	}
 
 	public void generateLibsvm(String trainLabelFile, String trainFolder,
-			String outputCsv, String fileType, boolean filterred,
+			String outputCsv, String fileType, boolean filtered,
 			String... featureFiles) throws Exception {
 		List<String> features = readFeature(featureFiles);
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
@@ -210,8 +213,13 @@ public class TrainingFileGenerator {
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
-					File f = new File(folderName + "/" + file + "." + fileType
-							+ "_filtered");
+					File f = null;
+					if (filtered)
+						f = new File(folderName + "/" + file + "." + fileType
+								+ "_filtered");
+					else
+						f = new File(folderName + "/" + file + "." + fileType);
+
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
@@ -222,34 +230,44 @@ public class TrainingFileGenerator {
 										f.getAbsolutePath()), "UTF-8"));
 						while ((aLine = in.readLine()) != null) {
 							String tmp = aLine.toLowerCase().trim();
-							fileContent.append(tmp + " ");
+
+							String[] sp = tmp.split("\\t{2,}\\s{2,}");
+							List<String> tokens = Arrays.asList(sp);
+							int index = 0;
+							for (String token : tokens) {
+								if (index > 0 && token.length() > 1) {
+									fileContent.append(token + " ");
+								}
+								index++;
+							}
+
+							fileContent.append(newLine);
 						}
 						in.close();
 						String content = fileContent.toString();
+						fileContent.setLength(0);
+
+						// get term frequency
+						Hashtable<String, Integer> tfMap = getTermFreqByLucene(content);
 
 						// add label
 						resultStr.append(label + " ");
 
 						// check if each feature exists
-						int index = 0;
+						int index = 1;
 						for (String feature : features) {
-							int termFreq = countTermFreqByRegEx(feature,
-									content);
-
-							if (index < features.size() - 1) {
-								if (content.contains(feature))
-									resultStr.append(index + ":" + termFreq
-											+ " ");
-								// resultStr.append(index + ":1 ");
-							} else {
-								if (content.contains(feature))
-									resultStr.append(index + ":" + termFreq
-											+ " " + newLine);
-								// resultStr.append(index + ":1 " + newLine);
+							// int termFreq = countTermFreqByRegEx(feature,
+							// content);
+							int termFreq = 0;
+							if (tfMap.containsKey(feature)) {
+								termFreq = tfMap.get(feature);
+								resultStr.append(index + ":" + termFreq + " ");
 							}
 
 							index++;
 						} // end of feature loop
+
+						resultStr.append(newLine);
 
 						if (resultStr.length() >= BUFFER_LENGTH) {
 							out.write(resultStr.toString());
@@ -263,10 +281,13 @@ public class TrainingFileGenerator {
 
 			} // end of label loop
 
+			System.out.println("Total # of features: " + features.size());
+
 		} finally {
 			out.write(resultStr.toString());
 			out.flush();
 			out.close();
+			resultStr.setLength(0);
 		}
 	}
 
