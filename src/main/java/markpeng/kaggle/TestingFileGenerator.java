@@ -142,8 +142,8 @@ public class TestingFileGenerator {
 							resultStr.setLength(0);
 						}
 						if (indexStr.length() >= BUFFER_LENGTH) {
-							out.write(indexStr.toString());
-							out.flush();
+							index.write(indexStr.toString());
+							index.flush();
 							indexStr.setLength(0);
 						}
 
