@@ -5,13 +5,21 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.util.Version;
 
 public class TrainingFileGenerator {
 
@@ -59,30 +67,32 @@ public class TrainingFileGenerator {
 		return output;
 	}
 
-	public List<String> readFeatureLabel(String featureFile) throws Exception {
+	public List<String> readFeature(String... featureFiles) throws Exception {
 		List<String> features = new ArrayList<String>();
 
-		BufferedReader in = new BufferedReader(new InputStreamReader(
-				new FileInputStream(featureFile), "UTF-8"));
+		for (String featureFile : featureFiles) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					new FileInputStream(featureFile), "UTF-8"));
 
-		try {
-			String aLine = null;
-			while ((aLine = in.readLine()) != null) {
-				String tmp = aLine.substring(0, aLine.indexOf(": ")).trim();
-				if (!features.contains(tmp))
-					features.add(tmp);
+			try {
+				String aLine = null;
+				while ((aLine = in.readLine()) != null) {
+					String tmp = aLine.toLowerCase().trim();
+					if (!features.contains(tmp))
+						features.add(tmp);
+				}
+			} finally {
+				in.close();
 			}
-		} finally {
-			in.close();
 		}
 
 		return features;
 	}
 
 	public void generatCSV(String trainLabelFile, String trainFolder,
-			String featureFile, String outputCsv, String fileType)
-			throws Exception {
-		List<String> features = readFeatureLabel(featureFile);
+			String outputCsv, String fileType, boolean filtered,
+			String... featureFiles) throws Exception {
+		List<String> features = readFeature(featureFiles);
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
 		StringBuffer resultStr = new StringBuffer();
@@ -91,13 +101,28 @@ public class TrainingFileGenerator {
 				new FileOutputStream(outputCsv, false), "UTF-8"));
 		try {
 
+			// add header line
+			int featureIndex = 0;
+			for (String feature : features) {
+				if (featureIndex < features.size() - 1)
+					resultStr.append(feature + ",");
+				else
+					resultStr.append(feature + ",label" + newLine);
+				featureIndex++;
+			}
+
 			for (String label : labels.keySet()) {
 				String folderName = trainFolder + "/" + label;
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
-					File f = new File(folderName + "/" + file + "." + fileType
-							+ "_filtered");
+					File f = null;
+					if (filtered)
+						f = new File(folderName + "/" + file + "." + fileType
+								+ "_filtered");
+					else
+						f = new File(folderName + "/" + file + "." + fileType);
+
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
@@ -108,33 +133,43 @@ public class TrainingFileGenerator {
 										f.getAbsolutePath()), "UTF-8"));
 						while ((aLine = in.readLine()) != null) {
 							String tmp = aLine.toLowerCase().trim();
-							fileContent.append(tmp + " ");
+
+							String[] sp = tmp.split("\\t{2,}\\s{2,}");
+							List<String> tokens = Arrays.asList(sp);
+							int index = 0;
+							for (String token : tokens) {
+								if (index > 0 && token.length() > 1) {
+									fileContent.append(token + " ");
+								}
+								index++;
+							}
+
+							fileContent.append(newLine);
 						}
 						in.close();
 						String content = fileContent.toString();
+						fileContent.setLength(0);
 
-						// add label
-						resultStr.append(label + ",");
+						// get term frequency
+						Hashtable<String, Integer> tfMap = getTermFreqByLucene(content);
 
 						// check if each feature exists
-						int index = 0;
 						for (String feature : features) {
-							int termFreq = countTermFreq(feature, content);
+							// int termFreq = countTermFreqByRegEx(feature,
+							// content);
+							int termFreq = 0;
+							if (tfMap.containsKey(feature))
+								termFreq = tfMap.get(feature);
 
-							if (index < features.size() - 1) {
-								if (content.contains(feature))
-									resultStr.append(termFreq + ",");
-								else
-									resultStr.append(termFreq + ",");
-							} else {
-								if (content.contains(feature))
-									resultStr.append(termFreq + newLine);
-								else
-									resultStr.append(termFreq + newLine);
-							}
+							if (content.contains(feature))
+								resultStr.append(termFreq + ",");
+							else
+								resultStr.append(termFreq + ",");
 
-							index++;
 						} // end of feature loop
+
+						// add label
+						resultStr.append(label + newLine);
 
 						if (resultStr.length() >= BUFFER_LENGTH) {
 							out.write(resultStr.toString());
@@ -148,17 +183,20 @@ public class TrainingFileGenerator {
 
 			} // end of label loop
 
+			System.out.println("Total # of features: " + features.size());
+
 		} finally {
 			out.write(resultStr.toString());
 			out.flush();
 			out.close();
+			resultStr.setLength(0);
 		}
 	}
 
 	public void generateLibsvm(String trainLabelFile, String trainFolder,
-			String featureFile, String outputCsv, String fileType)
-			throws Exception {
-		List<String> features = readFeatureLabel(featureFile);
+			String outputCsv, String fileType, boolean filterred,
+			String... featureFiles) throws Exception {
+		List<String> features = readFeature(featureFiles);
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
 		StringBuffer resultStr = new StringBuffer();
@@ -195,7 +233,8 @@ public class TrainingFileGenerator {
 						// check if each feature exists
 						int index = 0;
 						for (String feature : features) {
-							int termFreq = countTermFreq(feature, content);
+							int termFreq = countTermFreqByRegEx(feature,
+									content);
 
 							if (index < features.size() - 1) {
 								if (content.contains(feature))
@@ -231,7 +270,41 @@ public class TrainingFileGenerator {
 		}
 	}
 
-	private int countTermFreq(String word, String text) {
+	private Hashtable<String, Integer> getTermFreqByLucene(String text)
+			throws IOException {
+		Hashtable<String, Integer> result = new Hashtable<String, Integer>();
+
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
+		try {
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+
+					if (result.get(word) == null)
+						result.put(word, 1);
+					else {
+						result.put(word, result.get(word) + 1);
+					}
+
+					wordCount++;
+				}
+			}
+
+		} finally {
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
+		}
+
+		return result;
+	}
+
+	private int countTermFreqByRegEx(String word, String text) {
 		Pattern pattern = Pattern.compile(word);
 		Matcher matcher = pattern.matcher(text);
 		int counter = 0;
@@ -255,22 +328,23 @@ public class TrainingFileGenerator {
 
 		if (args.length < 6) {
 			System.out
-					.println("Arguments: [model{csv|libsvm}] [train folder] [train label file] [feature file] [output csv] [file type]");
+					.println("Arguments: [model{csv|libsvm}] [train folder] [train label file] [feature files] [output csv] [file type] [filtered]");
 			return;
 		}
 		String mode = args[0];
 		String trainFolder = args[1];
 		String trainLabelFile = args[2];
-		String featureFile = args[3];
+		String[] featureFiles = args[3].split("\\|");
 		String outputCsv = args[4];
 		String fileType = args[5];
+		boolean filterred = Boolean.parseBoolean(args[5]);
 		TrainingFileGenerator worker = new TrainingFileGenerator();
 		if (mode.equals("csv"))
-			worker.generatCSV(trainLabelFile, trainFolder, featureFile,
-					outputCsv, fileType);
+			worker.generatCSV(trainLabelFile, trainFolder, outputCsv, fileType,
+					filterred, featureFiles);
 		else if (mode.equals("libsvm"))
-			worker.generateLibsvm(trainLabelFile, trainFolder, featureFile,
-					outputCsv, fileType);
+			worker.generateLibsvm(trainLabelFile, trainFolder, outputCsv,
+					fileType, filterred, featureFiles);
 
 	}
 }
