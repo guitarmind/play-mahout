@@ -54,6 +54,131 @@ public class TestingFileGenerator {
 		return features;
 	}
 
+	public void generateCsv(String testFolder, String outputFile,
+			String outputIndexFile, String fileType, boolean filtered,
+			String... featureFiles) throws Exception {
+		List<String> features = readFeature(featureFiles);
+
+		StringBuffer resultStr = new StringBuffer();
+		StringBuffer indexStr = new StringBuffer();
+
+		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputFile, false), "UTF-8"));
+
+		BufferedWriter index = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputIndexFile, false), "UTF-8"));
+		try {
+
+			File checker = new File(testFolder);
+			if (checker.exists()) {
+
+				// get all test file path
+				List<String> testFiles = new ArrayList<String>();
+				for (final File fileEntry : checker.listFiles()) {
+					if (fileEntry.getName().contains("." + fileType)) {
+						String tmp = fileEntry.getAbsolutePath();
+						testFiles.add(tmp);
+					}
+				}
+
+				// add header line
+				int labelIndex = 0;
+				for (String feature : features) {
+					if (labelIndex < features.size() - 1)
+						resultStr.append(feature + ",");
+					else
+						resultStr.append(feature + newLine);
+					labelIndex++;
+				}
+
+				for (String file : testFiles) {
+					File f = new File(file);
+					String fileName = f.getName().trim();
+					fileName = fileName.substring(0, fileName.lastIndexOf("."));
+
+					System.out.println("Loading " + f.getAbsolutePath());
+					if (f.exists()) {
+
+						StringBuffer fileContent = new StringBuffer();
+						String aLine = null;
+						BufferedReader in = new BufferedReader(
+								new InputStreamReader(new FileInputStream(
+										f.getAbsolutePath()), "UTF-8"));
+						while ((aLine = in.readLine()) != null) {
+							String tmp = aLine.toLowerCase().trim();
+
+							String[] sp = tmp.split("\\t{2,}\\s{2,}");
+							List<String> tokens = Arrays.asList(sp);
+							int tokenIndex = 0;
+							for (String token : tokens) {
+								if (tokenIndex > 0 && token.length() > 1) {
+									fileContent.append(token + " ");
+								}
+								tokenIndex++;
+							}
+
+							fileContent.append(newLine);
+						}
+						in.close();
+						String content = fileContent.toString();
+						fileContent.setLength(0);
+
+						// get term frequency
+						Hashtable<String, Integer> tfMap = getTermFreqByLucene(content);
+
+						// check if each feature exists
+						int featureIndex = 0;
+						for (String feature : features) {
+							// int termFreq = countTermFreqByRegEx(feature,
+							// content);
+							int termFreq = 0;
+							if (tfMap.containsKey(feature))
+								termFreq = tfMap.get(feature);
+
+							if (featureIndex < features.size() - 1)
+								resultStr.append(termFreq + ",");
+							else
+								resultStr.append(termFreq);
+
+							featureIndex++;
+						} // end of feature loop
+
+						resultStr.append(newLine);
+
+						// record file name in order
+						indexStr.append(fileName + newLine);
+
+						if (resultStr.length() >= BUFFER_LENGTH) {
+							out.write(resultStr.toString());
+							out.flush();
+							resultStr.setLength(0);
+						}
+						if (indexStr.length() >= BUFFER_LENGTH) {
+							index.write(indexStr.toString());
+							index.flush();
+							indexStr.setLength(0);
+						}
+
+						System.out.println("Completed file: " + file);
+					}
+				} // end of label file loop
+
+				System.out.println("Total # of features: " + features.size());
+			}
+		} finally {
+			out.write(resultStr.toString());
+			out.flush();
+			out.close();
+			resultStr.setLength(0);
+
+			index.write(indexStr.toString());
+			index.flush();
+			index.close();
+			indexStr.setLength(0);
+		}
+
+	}
+
 	public void generateLibsvm(String testFolder, String outputFile,
 			String outputIndexFile, String fileType, boolean filtered,
 			String... featureFiles) throws Exception {
@@ -230,7 +355,8 @@ public class TestingFileGenerator {
 		boolean filterred = Boolean.parseBoolean(args[6]);
 		TestingFileGenerator worker = new TestingFileGenerator();
 		if (mode.equals("csv"))
-			;
+			worker.generateCsv(testFolder, outputFile, outputIndex, fileType,
+					filterred, featureFiles);
 		else if (mode.equals("libsvm"))
 			worker.generateLibsvm(testFolder, outputFile, outputIndex,
 					fileType, filterred, featureFiles);
