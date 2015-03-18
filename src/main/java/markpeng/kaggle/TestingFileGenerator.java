@@ -37,7 +37,7 @@ public class TestingFileGenerator {
 				String aLine = null;
 				while ((aLine = in.readLine()) != null) {
 					String tmp = aLine.toLowerCase().trim();
-					if (!features.contains(tmp))
+					if (tmp.length() > 0 && !features.contains(tmp))
 						features.add(tmp);
 				}
 			} finally {

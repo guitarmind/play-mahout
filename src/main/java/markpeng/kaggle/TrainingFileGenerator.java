@@ -78,7 +78,7 @@ public class TrainingFileGenerator {
 				String aLine = null;
 				while ((aLine = in.readLine()) != null) {
 					String tmp = aLine.toLowerCase().trim();
-					if (!features.contains(tmp))
+					if (tmp.length() > 0 && !features.contains(tmp))
 						features.add(tmp);
 				}
 			} finally {
@@ -113,7 +113,7 @@ public class TrainingFileGenerator {
 				if (featureIndex < features.size() - 1)
 					resultStr.append(feature + ",");
 				else
-					resultStr.append(feature + ",label" + newLine);
+					resultStr.append(feature + ",classLabel" + newLine);
 				featureIndex++;
 			}
 
