@@ -120,6 +120,16 @@ public class TrainingFileGenerator {
 			for (String label : labels.keySet()) {
 				String folderName = trainFolder + "/" + label;
 				List<String> fileList = labels.get(label);
+				// String folderName = trainFolder;
+				// List<String> fileList = new ArrayList<String>();
+				// for (final File fileEntry : (new
+				// File(trainFolder)).listFiles()) {
+				// if (fileEntry.getName().contains("." + fileType)) {
+				// String tmp = fileEntry.getName().substring(0,
+				// fileEntry.getName().lastIndexOf("."));
+				// fileList.add(tmp);
+				// }
+				// }
 
 				for (String file : fileList) {
 					File f = null;
@@ -148,6 +158,15 @@ public class TrainingFileGenerator {
 									fileContent.append(token + " ");
 								}
 								index++;
+							}
+
+							// extract function as feature
+							String function = extractFunction(tmp);
+							if (function != null
+									&& !features.contains(function)) {
+								features.add(function);
+								System.out.println("Detected function: "
+										+ function);
 							}
 
 							fileContent.append(newLine);
@@ -334,18 +353,43 @@ public class TrainingFileGenerator {
 		return counter;
 	}
 
+	private String extractFunction(String text) {
+		String tmp = null;
+
+		if (text.contains(";") && text.contains("(") && !text.contains(".text")) {
+			int commentIndex = text.indexOf(";");
+			int quoteIndex = text.indexOf("(");
+
+			if (commentIndex < quoteIndex) {
+				String[] arr = text.substring(0, quoteIndex).split("\\s");
+				if (arr != null) {
+					String candidate = arr[arr.length - 1];
+					if (candidate.length() >= 3
+							&& candidate.matches("[a-zA-Z]+[0-9]?"))
+						tmp = candidate;
+				}
+			}
+		}
+
+		return tmp;
+	}
+
 	public static void main(String[] args) throws Exception {
 
-		// args = new String[5];
+		// args = new String[7];
 		// args[0] = "csv";
 		// args[1] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
 		// args[3] =
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/mmc_train_bytes_4gram_colloc_sorted.txt";
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/newFeatures20150318.txt|"
+		// +
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/rf_nonzero_features.txt";
 		// args[4] =
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/train_feature_boolvector.csv";
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
+		// args[5] = "asm";
+		// args[6] = "false";
 
 		if (args.length < 6) {
 			System.out
