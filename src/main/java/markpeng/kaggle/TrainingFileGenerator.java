@@ -120,16 +120,6 @@ public class TrainingFileGenerator {
 			for (String label : labels.keySet()) {
 				String folderName = trainFolder + "/" + label;
 				List<String> fileList = labels.get(label);
-				// String folderName = trainFolder;
-				// List<String> fileList = new ArrayList<String>();
-				// for (final File fileEntry : (new
-				// File(trainFolder)).listFiles()) {
-				// if (fileEntry.getName().contains("." + fileType)) {
-				// String tmp = fileEntry.getName().substring(0,
-				// fileEntry.getName().lastIndexOf("."));
-				// fileList.add(tmp);
-				// }
-				// }
 
 				for (String file : fileList) {
 					File f = null;
@@ -158,15 +148,6 @@ public class TrainingFileGenerator {
 									fileContent.append(token + " ");
 								}
 								index++;
-							}
-
-							// extract function as feature
-							String function = extractFunction(tmp);
-							if (function != null
-									&& !features.contains(function)) {
-								features.add(function);
-								System.out.println("Detected function: "
-										+ function);
 							}
 
 							fileContent.append(newLine);
@@ -342,36 +323,6 @@ public class TrainingFileGenerator {
 		}
 
 		return result;
-	}
-
-	private int countTermFreqByRegEx(String word, String text) {
-		Pattern pattern = Pattern.compile(word);
-		Matcher matcher = pattern.matcher(text);
-		int counter = 0;
-		while (matcher.find())
-			counter++;
-		return counter;
-	}
-
-	private String extractFunction(String text) {
-		String tmp = null;
-
-		if (text.contains(";") && text.contains("(") && !text.contains(".text")) {
-			int commentIndex = text.indexOf(";");
-			int quoteIndex = text.indexOf("(");
-
-			if (commentIndex < quoteIndex) {
-				String[] arr = text.substring(0, quoteIndex).split("\\s");
-				if (arr != null) {
-					String candidate = arr[arr.length - 1];
-					if (candidate.length() >= 3
-							&& candidate.matches("[a-zA-Z]+[0-9]?"))
-						tmp = candidate;
-				}
-			}
-		}
-
-		return tmp;
 	}
 
 	public static void main(String[] args) throws Exception {
