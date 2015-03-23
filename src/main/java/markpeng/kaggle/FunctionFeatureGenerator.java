@@ -5,30 +5,25 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.util.Version;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class FunctionFeatureGenerator {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
-	public void generate(String trainFolder, String outputTxt, String fileType)
-			throws Exception {
-		List<String> features = new ArrayList<String>();
+	public void generate(String trainFolder, String outputTxt, String fileType,
+			int minDF) throws Exception {
+		TreeMap<String, Integer> features = new TreeMap<String, Integer>();
 
 		StringBuffer resultStr = new StringBuffer();
 
@@ -51,6 +46,7 @@ public class FunctionFeatureGenerator {
 
 				System.out.println("Loading " + f.getAbsolutePath());
 				if (f.exists()) {
+					List<String> func = new ArrayList<String>();
 					String aLine = null;
 					BufferedReader in = new BufferedReader(
 							new InputStreamReader(new FileInputStream(
@@ -60,30 +56,47 @@ public class FunctionFeatureGenerator {
 
 						// extract function as feature
 						String function = extractFunction(tmp);
-						if (function != null && !features.contains(function)) {
-							features.add(function);
+						if (function != null && !func.contains(function)) {
+							func.add(function);
 							System.out
 									.println("Detected function: " + function);
 						}
 					}
 					in.close();
 
+					// count DF
+					for (String c : func) {
+						if (features.containsKey(c))
+							features.put(c, features.get(c) + 1);
+						else
+							features.put(c, 1);
+					}
+
 					System.out.println("Completed filtering file: " + file);
 				}
 			} // end of file loop
 
 			// check if each feature exists
-			for (String feature : features) {
-				resultStr.append(feature + newLine);
+			SortedSet<Map.Entry<String, Integer>> sortedFeatures = entriesSortedByValues(features);
+			int validN = 0;
+			for (Map.Entry<String, Integer> m : sortedFeatures) {
+				String feature = m.getKey();
+				int df = m.getValue();
+				if (df >= minDF && !feature.equals("copyright")) {
+					resultStr.append(feature + "," + df + newLine);
 
-				if (resultStr.length() >= BUFFER_LENGTH) {
-					out.write(resultStr.toString());
-					out.flush();
-					resultStr.setLength(0);
+					if (resultStr.length() >= BUFFER_LENGTH) {
+						out.write(resultStr.toString());
+						out.flush();
+						resultStr.setLength(0);
+					}
+
+					validN++;
 				}
 			} // end of feature loop
 
-			System.out.println("Total # of features: " + features.size());
+			System.out.println("Total # of features (DF >= " + minDF + "): "
+					+ validN);
 
 		} finally {
 			out.write(resultStr.toString());
@@ -114,18 +127,38 @@ public class FunctionFeatureGenerator {
 		return tmp;
 	}
 
+	public static <K, V extends Comparable<? super V>> SortedSet<Map.Entry<K, V>> entriesSortedByValues(
+			Map<K, V> map) {
+		SortedSet<Map.Entry<K, V>> sortedEntries = new TreeSet<Map.Entry<K, V>>(
+				new Comparator<Map.Entry<K, V>>() {
+					@Override
+					public int compare(Map.Entry<K, V> e1, Map.Entry<K, V> e2) {
+						int res = e1.getValue().compareTo(e2.getValue());
+						if (res > 0)
+							return -1;
+						if (res < 0)
+							return 1;
+						else
+							return res;
+					}
+				});
+		sortedEntries.addAll(map.entrySet());
+		return sortedEntries;
+	}
+
 	public static void main(String[] args) throws Exception {
 
-		if (args.length < 3) {
+		if (args.length < 4) {
 			System.out
-					.println("Arguments: [train folder] [output txt] [file type] ");
+					.println("Arguments: [train folder] [output txt] [file type] [minDF] ");
 			return;
 		}
 		String trainFolder = args[0];
 		String outputTxt = args[1];
 		String fileType = args[2];
+		int minDF = Integer.parseInt(args[3]);
 		FunctionFeatureGenerator worker = new FunctionFeatureGenerator();
-		worker.generate(trainFolder, outputTxt, fileType);
+		worker.generate(trainFolder, outputTxt, fileType, minDF);
 
 	}
 }

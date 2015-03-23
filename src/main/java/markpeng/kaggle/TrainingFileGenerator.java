@@ -21,7 +21,7 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
-public class TrainingFileGenerator {
+public class TrainingFileGenerator implements Runnable {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
@@ -29,6 +29,43 @@ public class TrainingFileGenerator {
 	private static final int MAX_NGRAM = 2;
 	private static final int MIN_DF = 2;
 	private static final double MAX_DF_PERCENT = 0.85;
+
+	String mode;
+	String trainLabelFile;
+	String trainFolder;
+	String outputCsv;
+	String fileType;
+	boolean filtered;
+	String[] featureFiles;
+
+	public TrainingFileGenerator() {
+	}
+
+	public TrainingFileGenerator(String mode, String trainLabelFile,
+			String trainFolder, String outputCsv, String fileType,
+			boolean filtered, String... featureFiles) {
+		this.mode = mode;
+		this.trainLabelFile = trainLabelFile;
+		this.trainFolder = trainFolder;
+		this.outputCsv = outputCsv;
+		this.fileType = fileType;
+		this.filtered = filtered;
+	}
+
+	@Override
+	public void run() {
+		try {
+			if (mode.equals("csv"))
+				generatCSV(trainLabelFile, trainFolder, outputCsv, fileType,
+						filtered, featureFiles);
+			else if (mode.equals("libsvm"))
+				generateLibsvm(trainLabelFile, trainFolder, outputCsv,
+						fileType, filtered, featureFiles);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public Hashtable<String, List<String>> readTrainLabel(String trainLabelFile)
 			throws Exception {
@@ -109,6 +146,7 @@ public class TrainingFileGenerator {
 
 			// add header line
 			int featureIndex = 0;
+			resultStr.append("fileName,");
 			for (String feature : features) {
 				if (featureIndex < features.size() - 1)
 					resultStr.append(feature + ",");
@@ -131,6 +169,9 @@ public class TrainingFileGenerator {
 
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
+
+						// add fileName
+						resultStr.append(file + ",");
 
 						StringBuffer fileContent = new StringBuffer();
 						String aLine = null;
