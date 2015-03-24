@@ -33,6 +33,9 @@ public class BytesTrainingFileGenerator implements Runnable {
 	boolean filtered;
 	int ngram;
 
+	public BytesTrainingFileGenerator() {
+	}
+
 	public BytesTrainingFileGenerator(String label,
 			List<String> trainFileNames, String trainFolder, String outputCsv,
 			boolean filtered, int ngram) {
@@ -47,21 +50,24 @@ public class BytesTrainingFileGenerator implements Runnable {
 	@Override
 	public void run() {
 		try {
-			generatCSV(label, trainFileNames, trainFolder, outputCsv, filtered,
-					ngram);
+			// generatCSV(label, trainFileNames, trainFolder, outputCsv,
+			// filtered,
+			// ngram);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	public void generatCSV(String label, List<String> fileList,
-			String folderName, String outputCsv, boolean filtered, int ngram)
-			throws Exception {
+	public void generatCSV(String trainLabelFile, String folderName,
+			String outputCsv, boolean filtered, int ngram) throws Exception {
 		StringBuffer resultStr = new StringBuffer();
 
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(outputCsv, false), "UTF-8"));
+
+		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
+
 		try {
 
 			// add header line
@@ -71,65 +77,78 @@ public class BytesTrainingFileGenerator implements Runnable {
 			}
 			resultStr.append("classLabel" + newLine);
 
-			for (String file : fileList) {
-				File f = null;
-				if (filtered)
-					f = new File(folderName + "/" + label + "/" + file
-							+ ".bytes_filtered");
-				else
-					f = new File(folderName + "/" + file + ".bytes");
+			List<String> targetLabels = new ArrayList<String>();
+			targetLabels.add("1");
+			targetLabels.add("4");
+			targetLabels.add("5");
+			targetLabels.add("6");
+			targetLabels.add("8");
+			targetLabels.add("9");
+			for (String label : targetLabels) {
+				List<String> fileList = labels.get(label);
 
-				System.out.println("Loading " + f.getAbsolutePath());
-				if (f.exists()) {
+				for (String file : fileList) {
+					File f = null;
+					if (filtered)
+						f = new File(folderName + "/" + label + "/" + file
+								+ ".bytes_filtered");
+					else
+						f = new File(folderName + "/" + file + ".bytes");
 
-					// add fileName
-					resultStr.append(file + ",");
+					System.out.println("Loading " + f.getAbsolutePath());
+					if (f.exists()) {
 
-					List<String> tokens = new ArrayList<String>();
-					String aLine = null;
-					BufferedReader in = new BufferedReader(
-							new InputStreamReader(new FileInputStream(
-									f.getAbsolutePath()), "UTF-8"));
-					while ((aLine = in.readLine()) != null) {
-						String tmp = aLine.toLowerCase().trim();
+						// add fileName
+						resultStr.append(file + ",");
 
-						String[] sp = tmp.split("\\s");
-						for (String token : sp) {
-							if (!token.equals("??"))
-								tokens.add(token);
+						List<String> tokens = new ArrayList<String>();
+						String aLine = null;
+						BufferedReader in = new BufferedReader(
+								new InputStreamReader(new FileInputStream(
+										f.getAbsolutePath()), "UTF-8"));
+						while ((aLine = in.readLine()) != null) {
+							String tmp = aLine.toLowerCase().trim();
+
+							String[] sp = tmp.split("\\s");
+							for (String token : sp) {
+								if (!token.equals("??"))
+									tokens.add(token);
+							}
 						}
-					}
-					in.close();
+						in.close();
 
-					// get doc frequency of n-byte sequence
-					long[] table = new long[65536];
-					for (int i = 0; i < tokens.size(); i++) {
-						if (i % 2 == 0 && (i + 1) < tokens.size()) {
-							String seq = tokens.get(i) + tokens.get(i + 1);
-							int code = Integer.parseInt(seq, 16);
-							table[code] = 1;
+						// get doc frequency of n-byte sequence
+						long[] table = new long[65536];
+						for (int i = 0; i < tokens.size(); i++) {
+							if (i % 2 == 0 && (i + 1) < tokens.size()) {
+								String seq = tokens.get(i) + tokens.get(i + 1);
+								int code = Integer.parseInt(seq, 16);
+								table[code] = 1;
+							}
 						}
+						for (long l : table)
+							resultStr.append(l + ",");
+
+						tokens.clear();
+
+						// add label
+						resultStr.append(label + newLine);
+
+						if (resultStr.length() >= BUFFER_LENGTH) {
+							out.write(resultStr.toString());
+							out.flush();
+							resultStr.setLength(0);
+						}
+
+						System.out.println("Completed filtering file: " + file);
 					}
-					for (long l : table)
-						resultStr.append(l + ",");
 
-					tokens.clear();
+				} // end of file loop
 
-					// add label
-					resultStr.append(label + newLine);
+				// System.out.println("Total # of detected " + ngram
+				// + "-byte sequence: " + features.size());
 
-					if (resultStr.length() >= BUFFER_LENGTH) {
-						out.write(resultStr.toString());
-						out.flush();
-						resultStr.setLength(0);
-					}
-
-					System.out.println("Completed filtering file: " + file);
-				}
-			} // end of label file loop
-
-			// System.out.println("Total # of detected " + ngram
-			// + "-byte sequence: " + features.size());
+			} // end of label loop
 
 		} finally {
 			out.write(resultStr.toString());
@@ -238,24 +257,32 @@ public class BytesTrainingFileGenerator implements Runnable {
 		boolean filterred = Boolean.parseBoolean(args[3]);
 		int ngram = Integer.parseInt(args[4]);
 
-		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
+		// Hashtable<String, List<String>> labels =
+		// readTrainLabel(trainLabelFile);
 
-		Thread[] threads = new Thread[labels.keySet().size()];
-		int i = 0;
-		for (String label : labels.keySet()) {
-			List<String> fileList = labels.get(label);
-			BytesTrainingFileGenerator worker = new BytesTrainingFileGenerator(
-					label, fileList, trainFolder, outputCsv, filterred, ngram);
-			threads[i] = new Thread(worker);
-			threads[i].start();
+		BytesTrainingFileGenerator worker = new BytesTrainingFileGenerator();
+		worker.generatCSV(trainLabelFile, trainFolder, outputCsv, filterred,
+				ngram);
 
-			System.out.println("Running thread for class " + label + " ...");
+		// Thread[] threads = new Thread[labels.keySet().size()];
+		// int i = 0;
+		// for (String label : labels.keySet()) {
+		// List<String> fileList = labels.get(label);
+		//
+		// System.out.println("Running for class " + label + " ...");
+		// worker.generatCSV(label, fileList, trainFolder, outputCsv,
+		// filterred, ngram);
+		// // threads[i] = new Thread(worker);
+		// // threads[i].start();
+		//
+		// // System.out.println("Running thread for class " + label + " ...");
+		// // Thread.sleep(2000);
+		//
+		// i++;
+		// }
 
-			i++;
-		}
-
-		for (Thread t : threads)
-			t.join();
+		// for (Thread t : threads)
+		// t.join();
 
 	}
 }
