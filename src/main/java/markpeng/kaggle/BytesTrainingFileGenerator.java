@@ -74,7 +74,8 @@ public class BytesTrainingFileGenerator implements Runnable {
 			for (String file : fileList) {
 				File f = null;
 				if (filtered)
-					f = new File(folderName + "/" + file + ".bytes_filtered");
+					f = new File(folderName + "/" + label + "/" + file
+							+ ".bytes_filtered");
 				else
 					f = new File(folderName + "/" + file + ".bytes");
 
@@ -100,8 +101,17 @@ public class BytesTrainingFileGenerator implements Runnable {
 					}
 					in.close();
 
-					// get term frequency of n-byte sequence
+					// get doc frequency of n-byte sequence
 					long[] table = new long[65536];
+					for (int i = 0; i < tokens.size(); i++) {
+						if (i % 2 == 0 && (i + 1) < tokens.size()) {
+							String seq = tokens.get(i) + tokens.get(i + 1);
+							int code = Integer.parseInt(seq, 16);
+							table[code] = 1;
+						}
+					}
+					for (long l : table)
+						resultStr.append(l + ",");
 
 					tokens.clear();
 
@@ -217,28 +227,35 @@ public class BytesTrainingFileGenerator implements Runnable {
 		// args[5] = "asm";
 		// args[6] = "false";
 
-		if (args.length < 6) {
+		if (args.length < 5) {
 			System.out
-					.println("Arguments: [model{csv|libsvm}] [train folder] [train label file] [feature files] [output csv] [file type] [filtered]");
+					.println("Arguments: [train folder] [train label file] [output csv] [filtered] [ngram]");
 			return;
 		}
-		String mode = args[0];
-		String trainFolder = args[1];
-		String trainLabelFile = args[2];
-		String[] featureFiles = args[3].split("\\|");
-		String outputCsv = args[4];
-		String fileType = args[5];
-		boolean filterred = Boolean.parseBoolean(args[5]);
+		String trainFolder = args[0];
+		String trainLabelFile = args[1];
+		String outputCsv = args[2];
+		boolean filterred = Boolean.parseBoolean(args[3]);
+		int ngram = Integer.parseInt(args[4]);
 
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
-		// BytesTrainingFileGenerator worker = new BytesTrainingFileGenerator();
-		// if (mode.equals("csv"))
-		// worker.generatCSV(trainLabelFile, trainFolder, outputCsv, fileType,
-		// filterred, featureFiles);
-		// else if (mode.equals("libsvm"))
-		// worker.generateLibsvm(trainLabelFile, trainFolder, outputCsv,
-		// fileType, filterred, featureFiles);
+		Thread[] threads = new Thread[labels.keySet().size()];
+		int i = 0;
+		for (String label : labels.keySet()) {
+			List<String> fileList = labels.get(label);
+			BytesTrainingFileGenerator worker = new BytesTrainingFileGenerator(
+					label, fileList, trainFolder, outputCsv, filterred, ngram);
+			threads[i] = new Thread(worker);
+			threads[i].start();
+
+			System.out.println("Running thread for class " + label + " ...");
+
+			i++;
+		}
+
+		for (Thread t : threads)
+			t.join();
 
 	}
 }

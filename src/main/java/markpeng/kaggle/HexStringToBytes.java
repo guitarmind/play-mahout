@@ -13,7 +13,8 @@ public class HexStringToBytes {
 	}
 
 	public static void main(String[] args) {
-		long value = Long.parseLong("75F92BC2", 16);
+		// long value = Long.parseLong("75F92BC2", 16);
+		int value = Integer.parseInt("FFFF", 16);
 		System.out.println(value);
 	}
 
