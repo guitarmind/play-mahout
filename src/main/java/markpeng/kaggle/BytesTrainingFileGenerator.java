@@ -77,14 +77,15 @@ public class BytesTrainingFileGenerator implements Runnable {
 			}
 			resultStr.append("classLabel" + newLine);
 
-			List<String> targetLabels = new ArrayList<String>();
-			targetLabels.add("1");
-			targetLabels.add("4");
-			targetLabels.add("5");
-			targetLabels.add("6");
-			targetLabels.add("8");
-			targetLabels.add("9");
-			for (String label : targetLabels) {
+			// List<String> targetLabels = new ArrayList<String>();
+			// targetLabels.add("1");
+			// targetLabels.add("4");
+			// targetLabels.add("5");
+			// targetLabels.add("6");
+			// targetLabels.add("8");
+			// targetLabels.add("9");
+			// for (String label : targetLabels) {
+			for (String label : labels.keySet()) {
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
@@ -132,7 +133,7 @@ public class BytesTrainingFileGenerator implements Runnable {
 						tokens.clear();
 
 						// add label
-						resultStr.append(label + newLine);
+						resultStr.append("class" + label + newLine);
 
 						if (resultStr.length() >= BUFFER_LENGTH) {
 							out.write(resultStr.toString());
