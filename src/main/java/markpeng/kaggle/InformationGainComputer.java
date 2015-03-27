@@ -78,11 +78,16 @@ public class InformationGainComputer {
 
 	public static void main(String[] args) throws Exception {
 
-		args = new String[4];
-		args[0] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
-		args[1] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/topN_infogain_20150327.txt";
-		args[3] = "500";
+		// System.out.println(Integer.MAX_VALUE - 5);
+
+		// args = new String[4];
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/topN_infogain_20150327.txt";
+		// args[3] = "500";
 
 		if (args.length < 4) {
 			System.out
@@ -177,6 +182,8 @@ public class InformationGainComputer {
 					}
 				} // end of value loop
 
+				System.out.println("Completed feature " + n + ": " + infoGain);
+
 				infoGainTable.put(n, infoGain);
 			} // end of ngram loop
 
@@ -187,22 +194,24 @@ public class InformationGainComputer {
 				int index = m.getKey();
 				double infoGain = m.getValue();
 
-				if (validN < topN) {
-					outputStr.append(index + "," + infoGain);
-					outputStr.append(newLine);
+				if (!Double.isInfinite(infoGain) && !Double.isNaN(infoGain)) {
+					if (validN < topN) {
+						outputStr.append(index + "," + infoGain);
+						outputStr.append(newLine);
 
-					System.out.println(index + "," + infoGain);
+						System.out.println(index + "," + infoGain);
 
-					if (outputStr.length() >= BUFFER_LENGTH) {
-						out.write(outputStr.toString());
-						out.flush();
-						outputStr.setLength(0);
-					}
+						if (outputStr.length() >= BUFFER_LENGTH) {
+							out.write(outputStr.toString());
+							out.flush();
+							outputStr.setLength(0);
+						}
 
-				} else
-					break;
+					} else
+						break;
 
-				validN++;
+					validN++;
+				}
 			} // end of feature loop
 
 			System.out.println("Total # of features: " + validN);
