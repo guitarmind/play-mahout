@@ -91,6 +91,8 @@ public class BytesTrainingFileGenerator implements Runnable {
 				for (String file : fileList) {
 					File f = null;
 					if (filtered)
+						// f = new File(folderName + "/" + file
+						// + ".bytes_filtered");
 						f = new File(folderName + "/" + label + "/" + file
 								+ ".bytes_filtered");
 					else
@@ -133,7 +135,8 @@ public class BytesTrainingFileGenerator implements Runnable {
 						tokens.clear();
 
 						// add label
-						resultStr.append("class" + label + newLine);
+						resultStr.append(label + newLine);
+						// resultStr.append("class" + label + newLine);
 
 						if (resultStr.length() >= BUFFER_LENGTH) {
 							out.write(resultStr.toString());
@@ -232,20 +235,12 @@ public class BytesTrainingFileGenerator implements Runnable {
 
 	public static void main(String[] args) throws Exception {
 
-		// args = new String[7];
-		// args[0] = "csv";
-		// args[1] =
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
-		// args[2] =
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
-		// args[3] =
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/newFeatures20150318.txt|"
-		// +
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/ireullin/rf_nonzero_features.txt";
-		// args[4] =
-		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/submission.csv";
-		// args[5] = "asm";
-		// args[6] = "false";
+		args = new String[5];
+		args[0] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
+		args[1] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
+		args[3] = "true";
+		args[4] = "2";
 
 		if (args.length < 5) {
 			System.out
