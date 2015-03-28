@@ -10,53 +10,24 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.TreeSet;
+
+import javax.swing.text.TableView;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
-public class BytesTrainingFileGenerator implements Runnable {
+public class BytesTrainingFileGenerator {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
-	String label;
-	List<String> trainFileNames;
-	String trainFolder;
-	String outputCsv;
-	boolean filtered;
-	int ngram;
-
 	public BytesTrainingFileGenerator() {
-	}
-
-	public BytesTrainingFileGenerator(String label,
-			List<String> trainFileNames, String trainFolder, String outputCsv,
-			boolean filtered, int ngram) {
-		this.label = label;
-		this.trainFileNames = trainFileNames;
-		this.trainFolder = trainFolder;
-		this.outputCsv = outputCsv;
-		this.filtered = filtered;
-		this.ngram = ngram;
-	}
-
-	@Override
-	public void run() {
-		try {
-			// generatCSV(label, trainFileNames, trainFolder, outputCsv,
-			// filtered,
-			// ngram);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 	public void generatCSV(String trainLabelFile, String folderName,
@@ -68,14 +39,12 @@ public class BytesTrainingFileGenerator implements Runnable {
 
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
-		try {
+		TreeSet<Long> tableKeys = new TreeSet<Long>();
+		List<String> fileNames = new ArrayList<String>();
+		Hashtable<String, HashSet<Long>> fileValues = new Hashtable<String, HashSet<Long>>();
+		Hashtable<String, String> fileLabels = new Hashtable<String, String>();
 
-			// add header line
-			resultStr.append("fileName,");
-			for (int i = 0; i <= 65535; i++) {
-				resultStr.append(i + ",");
-			}
-			resultStr.append("classLabel" + newLine);
+		try {
 
 			// List<String> targetLabels = new ArrayList<String>();
 			// targetLabels.add("1");
@@ -101,9 +70,6 @@ public class BytesTrainingFileGenerator implements Runnable {
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
-						// add fileName
-						resultStr.append(file + ",");
-
 						List<String> tokens = new ArrayList<String>();
 						String aLine = null;
 						BufferedReader in = new BufferedReader(
@@ -121,28 +87,29 @@ public class BytesTrainingFileGenerator implements Runnable {
 						in.close();
 
 						// get doc frequency of n-byte sequence
-						long[] table = new long[65536];
+						// long[] table = new long[65536];
+						HashSet<Long> table = new HashSet<Long>();
 						for (int i = 0; i < tokens.size(); i++) {
-							if (i % 2 == 0 && (i + 1) < tokens.size()) {
-								String seq = tokens.get(i) + tokens.get(i + 1);
-								int code = Integer.parseInt(seq, 16);
-								table[code] = 1;
+							int ngramEnd = i + (ngram - 1);
+
+							if (i % ngram == 0 && ngramEnd < tokens.size()) {
+								// String seq = tokens.get(i) + tokens.get(i +
+								// 1);
+								String seq = "";
+								for (int j = i; j <= ngramEnd; j++) {
+									seq += tokens.get(j);
+								}
+
+								long code = Long.parseLong(seq, 16);
+								table.add(code);
+								tableKeys.add(code);
 							}
 						}
-						for (long l : table)
-							resultStr.append(l + ",");
 
+						fileNames.add(file);
+						fileValues.put(file, table);
+						fileLabels.put(file, label);
 						tokens.clear();
-
-						// add label
-						resultStr.append(label + newLine);
-						// resultStr.append("class" + label + newLine);
-
-						if (resultStr.length() >= BUFFER_LENGTH) {
-							out.write(resultStr.toString());
-							out.flush();
-							resultStr.setLength(0);
-						}
 
 						System.out.println("Completed filtering file: " + file);
 					}
@@ -153,6 +120,51 @@ public class BytesTrainingFileGenerator implements Runnable {
 				// + "-byte sequence: " + features.size());
 
 			} // end of label loop
+
+			// add header line
+			resultStr.append("fileName,");
+			for (Long l : tableKeys) {
+				resultStr.append(l + ",");
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					out.write(resultStr.toString());
+					out.flush();
+					resultStr.setLength(0);
+				}
+			}
+			resultStr.append("classLabel" + newLine);
+
+			// generate final csv
+			for (String file : fileNames) {
+				// add fileName
+				resultStr.append(file + ",");
+
+				HashSet<Long> table = fileValues.get(file);
+				for (Long l : tableKeys) {
+					if (table.contains(l))
+						resultStr.append("1,");
+					else
+						resultStr.append("0,");
+
+					if (resultStr.length() >= BUFFER_LENGTH) {
+						out.write(resultStr.toString());
+						out.flush();
+						resultStr.setLength(0);
+					}
+				}
+				// resultStr.append(l + ",");
+
+				// add label
+				String label = fileLabels.get(file);
+				resultStr.append(label + newLine);
+				// resultStr.append("class" + label + newLine);
+
+				System.out.println("Completed generating csv row for file: "
+						+ file);
+			}
+
+			System.out.println("Total number of byte codes: "
+					+ tableKeys.size());
 
 		} finally {
 			out.write(resultStr.toString());
@@ -235,12 +247,15 @@ public class BytesTrainingFileGenerator implements Runnable {
 
 	public static void main(String[] args) throws Exception {
 
-		args = new String[5];
-		args[0] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
-		args[1] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
-		args[3] = "true";
-		args[4] = "2";
+		// args = new String[5];
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
+		// args[3] = "true";
+		// args[4] = "2";
 
 		if (args.length < 5) {
 			System.out
