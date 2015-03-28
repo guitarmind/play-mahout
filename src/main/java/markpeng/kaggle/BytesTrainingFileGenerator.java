@@ -71,6 +71,7 @@ public class BytesTrainingFileGenerator {
 					if (f.exists()) {
 
 						List<String> tokens = new ArrayList<String>();
+						List<String> prevLastThreetokens = new ArrayList<String>();
 						String aLine = null;
 						BufferedReader in = new BufferedReader(
 								new InputStreamReader(new FileInputStream(
@@ -83,6 +84,14 @@ public class BytesTrainingFileGenerator {
 								if (!token.equals("??"))
 									tokens.add(token);
 							}
+
+							// keep last N-1 tokens
+							if (tokens.size() > 0) {
+								for (int k = ngram - 1; k >= 1; k--)
+									prevLastThreetokens.add(tokens.get(tokens
+											.size() - k));
+							}
+							tokens.clear();
 						}
 						in.close();
 
@@ -109,7 +118,6 @@ public class BytesTrainingFileGenerator {
 						fileNames.add(file);
 						fileValues.put(file, table);
 						fileLabels.put(file, label);
-						tokens.clear();
 
 						System.out.println("Completed filtering file: " + file);
 					}
