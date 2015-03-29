@@ -5,21 +5,12 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.util.Version;
+import java.util.TreeSet;
 
 public class FeatureBasedBytesTrainingFileGenerator {
 
@@ -38,14 +29,21 @@ public class FeatureBasedBytesTrainingFileGenerator {
 				new FileOutputStream(outputCsv, false), "UTF-8"));
 
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
-		List<Integer> features = readFeatures(featureFile);
+
+		List<Long> features = readFeatures(featureFile);
 
 		try {
 
 			// add header line
 			resultStr.append("fileName,");
-			for (int i = 0; i < features.size(); i++) {
-				resultStr.append(features.get(i) + ",");
+			for (Long l : features) {
+				resultStr.append(l + ",");
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					out.write(resultStr.toString());
+					out.flush();
+					resultStr.setLength(0);
+				}
 			}
 			resultStr.append("classLabel" + newLine);
 
@@ -68,7 +66,10 @@ public class FeatureBasedBytesTrainingFileGenerator {
 						// add fileName
 						resultStr.append(file + ",");
 
+						TreeSet<Long> resultTable = new TreeSet<Long>();
+
 						List<String> tokens = new ArrayList<String>();
+						List<String> prevLastThreetokens = new ArrayList<String>();
 						String aLine = null;
 						BufferedReader in = new BufferedReader(
 								new InputStreamReader(new FileInputStream(
@@ -81,33 +82,57 @@ public class FeatureBasedBytesTrainingFileGenerator {
 								if (!token.equals("??"))
 									tokens.add(token);
 							}
+
+							// count byte ngram
+							if (prevLastThreetokens.size() > 0)
+								tokens.addAll(0, prevLastThreetokens);
+							for (int i = 0; i < tokens.size(); i++) {
+								int ngramEnd = i + (ngram - 1);
+
+								if (i % ngram == 0 && ngramEnd < tokens.size()) {
+									// String seq = tokens.get(i) + tokens.get(i
+									// +
+									// 1);
+									String seq = "";
+									for (int j = i; j <= ngramEnd; j++) {
+										seq += tokens.get(j);
+									}
+
+									long code = Long.parseLong(seq, 16);
+									resultTable.add(code);
+								}
+							}
+
+							// keep last N-1 tokens
+							if (tokens.size() > 0) {
+								prevLastThreetokens.clear();
+								for (int k = ngram - 1; k >= 1; k--)
+									prevLastThreetokens.add(tokens.get(tokens
+											.size() - k));
+							}
+							tokens.clear();
 						}
 						in.close();
+						tokens.clear();
+						prevLastThreetokens.clear();
 
-						// get doc frequency of n-byte sequence
-						int[] table = new int[features.size()];
-						for (int i = 0; i < tokens.size(); i++) {
-							if (i % 2 == 0 && (i + 1) < tokens.size()) {
-								String seq = tokens.get(i) + tokens.get(i + 1);
-								int code = Integer.parseInt(seq, 16);
+						// write row data
+						for (Long l : features) {
+							if (resultTable.contains(l))
+								resultStr.append("1,");
+							else
+								resultStr.append("0,");
 
-								if (features.contains(code))
-									table[features.indexOf(code)] = 1;
+							if (resultStr.length() >= BUFFER_LENGTH) {
+								out.write(resultStr.toString());
+								out.flush();
+								resultStr.setLength(0);
 							}
 						}
-						for (long l : table)
-							resultStr.append(l + ",");
-
-						tokens.clear();
+						resultTable.clear();
 
 						// add label
 						resultStr.append(label + newLine);
-
-						if (resultStr.length() >= BUFFER_LENGTH) {
-							out.write(resultStr.toString());
-							out.flush();
-							resultStr.setLength(0);
-						}
 
 						System.out.println("Completed filtering file: " + file);
 					}
@@ -164,9 +189,8 @@ public class FeatureBasedBytesTrainingFileGenerator {
 		return output;
 	}
 
-	public static List<Integer> readFeatures(String featureFile)
-			throws Exception {
-		List<Integer> output = new ArrayList<Integer>();
+	public static List<Long> readFeatures(String featureFile) throws Exception {
+		List<Long> output = new ArrayList<Long>();
 
 		BufferedReader in = new BufferedReader(new InputStreamReader(
 				new FileInputStream(featureFile), "UTF-8"));
@@ -174,11 +198,18 @@ public class FeatureBasedBytesTrainingFileGenerator {
 		try {
 			String aLine = null;
 			while ((aLine = in.readLine()) != null) {
-				String[] sp = aLine.split(",");
-				if (sp != null && sp.length > 0) {
-					int feature = Integer.parseInt(sp[0]);
-					if (!output.contains(feature))
+				if (aLine.contains(",")) {
+					String[] sp = aLine.split(",");
+					if (sp != null && sp.length > 0) {
+						long feature = Long.parseLong(sp[0]);
+						if (!output.contains(feature))
+							output.add(feature);
+					}
+				} else {
+					if (aLine.trim().length() > 0) {
+						long feature = Long.parseLong(aLine.trim());
 						output.add(feature);
+					}
 				}
 			}
 		} finally {
