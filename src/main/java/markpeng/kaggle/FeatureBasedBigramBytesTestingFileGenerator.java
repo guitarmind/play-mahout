@@ -69,7 +69,7 @@ public class FeatureBasedBigramBytesTestingFileGenerator {
 					if (f.exists()) {
 
 						// add fileName
-						resultStr.append(file + ",");
+						resultStr.append(fileName + ",");
 
 						List<String> tokens = new ArrayList<String>();
 						String aLine = null;
