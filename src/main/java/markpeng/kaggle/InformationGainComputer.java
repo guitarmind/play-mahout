@@ -78,11 +78,8 @@ public class InformationGainComputer {
 
 	public static void main(String[] args) throws Exception {
 
-<<<<<<< HEAD
-=======
 		// System.out.println(Integer.MAX_VALUE - 5);
-
->>>>>>> 410b223135ed70aecb7887f24d2507fc36ad4fd0
+		
 		// args = new String[4];
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
