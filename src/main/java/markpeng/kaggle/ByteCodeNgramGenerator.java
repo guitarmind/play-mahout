@@ -10,8 +10,10 @@ import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.TreeSet;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.WhitespaceTokenizer;
@@ -62,8 +64,9 @@ public class ByteCodeNgramGenerator {
 	}
 
 	public void generate(String trainLabelFile, String trainFolder,
-			String outputTxt, String fileType, int ngram) throws Exception {
-		List<String> features = new ArrayList<String>();
+			String outputTxt, int ngram) throws Exception {
+		TreeSet<Long> features = new TreeSet<Long>();
+
 		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 
 		StringBuffer resultStr = new StringBuffer();
@@ -77,12 +80,14 @@ public class ByteCodeNgramGenerator {
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
-					File f = new File(folderName + "/" + file + "." + fileType);
+					File f = new File(folderName + "/" + file
+							+ ".bytes_filtered");
 
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
-						StringBuffer fileContent = new StringBuffer();
+						List<String> tokens = new ArrayList<String>();
+						List<String> prevLastThreetokens = new ArrayList<String>();
 						String aLine = null;
 						BufferedReader in = new BufferedReader(
 								new InputStreamReader(new FileInputStream(
@@ -91,26 +96,43 @@ public class ByteCodeNgramGenerator {
 							String tmp = aLine.toLowerCase().trim();
 
 							String[] sp = tmp.split("\\s");
-							List<String> tokens = Arrays.asList(sp);
-							for (String token : tokens) {
-								if (token.length() == 2 && !token.equals("??")) {
-									fileContent.append(token + " ");
+							for (String token : sp) {
+								if (!token.equals("??"))
+									tokens.add(token);
+							}
+
+							// count byte ngram
+							if (prevLastThreetokens.size() > 0)
+								tokens.addAll(0, prevLastThreetokens);
+							for (int i = 0; i < tokens.size(); i++) {
+								int ngramEnd = i + (ngram - 1);
+
+								if (i % ngram == 0 && ngramEnd < tokens.size()) {
+									// String seq = tokens.get(i) + tokens.get(i
+									// +
+									// 1);
+									String seq = "";
+									for (int j = i; j <= ngramEnd; j++) {
+										seq += tokens.get(j);
+									}
+
+									long code = Long.parseLong(seq, 16);
+									features.add(code);
 								}
 							}
 
-							fileContent.append(newLine);
+							// keep last N-1 tokens
+							if (tokens.size() > 0) {
+								prevLastThreetokens.clear();
+								for (int k = ngram - 1; k >= 1; k--)
+									prevLastThreetokens.add(tokens.get(tokens
+											.size() - k));
+							}
+							tokens.clear();
 						}
 						in.close();
-
-						// extract ngram
-						List<String> result = extractNgram(
-								fileContent.toString(), ngram);
-						for (String token : result) {
-							if (!features.contains(token)) {
-								features.add(token);
-								System.out.println("Detected ngram: " + token);
-							}
-						}
+						tokens.clear();
+						prevLastThreetokens.clear();
 
 						System.out.println("Completed filtering file: " + file);
 					}
@@ -119,7 +141,7 @@ public class ByteCodeNgramGenerator {
 			} // end of label loop
 
 			// check if each feature exists
-			for (String feature : features) {
+			for (Long feature : features) {
 				resultStr.append(feature + newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
@@ -139,47 +161,19 @@ public class ByteCodeNgramGenerator {
 		}
 	}
 
-	private List<String> extractNgram(String text, int ngram) throws Exception {
-		List<String> result = new ArrayList<String>();
-
-		TokenStream ts = new WhitespaceTokenizer(Version.LUCENE_46,
-				new StringReader(text));
-		ts = new ShingleFilter(ts, ngram, ngram);
-		try {
-			CharTermAttribute termAtt = ts
-					.addAttribute(CharTermAttribute.class);
-			ts.reset();
-			while (ts.incrementToken()) {
-				if (termAtt.length() > 0) {
-					String word = termAtt.toString();
-					if (!result.contains(word))
-						result.add(word);
-				}
-			}
-
-		} finally {
-			// Fixed error : close ts:TokenStream
-			ts.end();
-			ts.close();
-		}
-
-		return result;
-	}
-
 	public static void main(String[] args) throws Exception {
 
-		if (args.length < 5) {
+		if (args.length < 4) {
 			System.out
-					.println("Arguments: [train folder] [train label file] [output txt] [file type] [ngram]");
+					.println("Arguments: [train folder] [train label file] [output txt] [ngram]");
 			return;
 		}
 		String trainFolder = args[0];
 		String trainLabelFile = args[1];
 		String outputTxt = args[2];
-		String fileType = args[3];
-		int ngram = Integer.parseInt(args[4]);
+		int ngram = Integer.parseInt(args[3]);
 		ByteCodeNgramGenerator worker = new ByteCodeNgramGenerator();
-		worker.generate(trainLabelFile, trainFolder, outputTxt, fileType, ngram);
+		worker.generate(trainLabelFile, trainFolder, outputTxt, ngram);
 
 	}
 }

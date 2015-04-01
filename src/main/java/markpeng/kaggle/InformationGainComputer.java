@@ -78,6 +78,11 @@ public class InformationGainComputer {
 
 	public static void main(String[] args) throws Exception {
 
+<<<<<<< HEAD
+=======
+		// System.out.println(Integer.MAX_VALUE - 5);
+
+>>>>>>> 410b223135ed70aecb7887f24d2507fc36ad4fd0
 		// args = new String[4];
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
@@ -180,6 +185,8 @@ public class InformationGainComputer {
 					}
 				} // end of value loop
 
+				System.out.println("Completed feature " + n + ": " + infoGain);
+
 				infoGainTable.put(n, infoGain);
 			} // end of ngram loop
 
@@ -190,22 +197,24 @@ public class InformationGainComputer {
 				int index = m.getKey();
 				double infoGain = m.getValue();
 
-				if (validN < topN) {
-					outputStr.append(index + "," + infoGain);
-					outputStr.append(newLine);
+				if (!Double.isInfinite(infoGain) && !Double.isNaN(infoGain)) {
+					if (validN < topN) {
+						outputStr.append(index + "," + infoGain);
+						outputStr.append(newLine);
 
-					System.out.println(index + "," + infoGain);
+						System.out.println(index + "," + infoGain);
 
-					if (outputStr.length() >= BUFFER_LENGTH) {
-						out.write(outputStr.toString());
-						out.flush();
-						outputStr.setLength(0);
-					}
+						if (outputStr.length() >= BUFFER_LENGTH) {
+							out.write(outputStr.toString());
+							out.flush();
+							outputStr.setLength(0);
+						}
 
-				} else
-					break;
+					} else
+						break;
 
-				validN++;
+					validN++;
+				}
 			} // end of feature loop
 
 			System.out.println("Total # of features: " + validN);
