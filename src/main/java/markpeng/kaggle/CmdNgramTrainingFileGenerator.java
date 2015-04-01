@@ -272,6 +272,8 @@ public class CmdNgramTrainingFileGenerator {
 			} // end of label loop
 
 			System.out.println("Total # of features: " + features.size());
+			System.out.println("Total # of cmd line ngram features: "
+					+ cmdNgramFeatures.size());
 
 		} finally {
 			out.write(resultStr.toString());
