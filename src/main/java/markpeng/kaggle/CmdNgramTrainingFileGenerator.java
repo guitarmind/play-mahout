@@ -165,9 +165,9 @@ public class CmdNgramTrainingFileGenerator {
 
 			// add header line
 			resultStr.append("fileName,");
-			for (String feature : features) {
-				resultStr.append(feature + ",");
-			}
+			// for (String feature : features) {
+			// resultStr.append(feature + ",");
+			// }
 			int featureIndex = 0;
 			for (String c : cmdNgramFeatures) {
 				if (featureIndex < cmdNgramFeatures.size() - 1)
@@ -230,20 +230,21 @@ public class CmdNgramTrainingFileGenerator {
 						fileContent.setLength(0);
 
 						// get term frequency
-						Hashtable<String, Integer> tfMap = getTermFreqByLucene(content);
+						// Hashtable<String, Integer> tfMap =
+						// getTermFreqByLucene(content);
 
 						// check if each feature exists
-						for (String feature : features) {
-							// int termFreq = countTermFreqByRegEx(feature,
-							// content);
-							int termFreq = 0;
-							if (tfMap.containsKey(feature)) {
-								termFreq = tfMap.get(feature);
-							}
-
-							resultStr.append(termFreq + ",");
-
-						} // end of feature loop
+						// for (String feature : features) {
+						// // int termFreq = countTermFreqByRegEx(feature,
+						// // content);
+						// int termFreq = 0;
+						// if (tfMap.containsKey(feature)) {
+						// termFreq = tfMap.get(feature);
+						// }
+						//
+						// resultStr.append(termFreq + ",");
+						//
+						// } // end of feature loop
 
 						// create ngrams
 						Hashtable<String, Integer> ngrams = getNgramFreqByLucene(
@@ -336,7 +337,7 @@ public class CmdNgramTrainingFileGenerator {
 				if (termAtt.length() > 0) {
 					String word = termAtt.toString();
 					if (word.split("\\s").length == ngram) {
-						System.out.println(word);
+						// System.out.println(word);
 						if (result.get(word) == null)
 							result.put(word, 1);
 						else {
