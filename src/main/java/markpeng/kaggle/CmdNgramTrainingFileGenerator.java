@@ -115,6 +115,9 @@ public class CmdNgramTrainingFileGenerator {
 			Hashtable<String, Hashtable<String, Integer>> fileCmdNgramTable = new Hashtable<String, Hashtable<String, Integer>>();
 
 			// first loop: get cmd ngram features
+			// List<String> tmpLabels = new ArrayList<String>();
+			// tmpLabels.add("8");
+			// for (String label : tmpLabels) {
 			for (String label : labels.keySet()) {
 				String folderName = trainFolder + "/" + label;
 				List<String> fileList = labels.get(label);
@@ -165,9 +168,6 @@ public class CmdNgramTrainingFileGenerator {
 
 			// add header line
 			resultStr.append("fileName,");
-			// for (String feature : features) {
-			// resultStr.append(feature + ",");
-			// }
 			int featureIndex = 0;
 			for (String c : cmdNgramFeatures) {
 				if (featureIndex < cmdNgramFeatures.size() - 1)
@@ -179,95 +179,32 @@ public class CmdNgramTrainingFileGenerator {
 			}
 
 			for (String label : labels.keySet()) {
-				String folderName = trainFolder + "/" + label;
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
-					File f = null;
-					if (filtered)
-						f = new File(folderName + "/" + file + "." + fileType
-								+ "_filtered");
-					else
-						f = new File(folderName + "/" + file + "." + fileType);
-
-					System.out.println("Loading " + f.getAbsolutePath());
-					if (f.exists()) {
-						List<String> lineCmds = new ArrayList<String>();
-
-						// add fileName
-						resultStr.append(file + ",");
-
-						StringBuffer fileContent = new StringBuffer();
-						String aLine = null;
-						BufferedReader in = new BufferedReader(
-								new InputStreamReader(new FileInputStream(
-										f.getAbsolutePath()), "UTF-8"));
-						while ((aLine = in.readLine()) != null) {
-							String tmp = aLine.toLowerCase().trim();
-
-							String[] sp = tmp.split("\\t{2,}\\s{2,}");
-							List<String> tokens = Arrays.asList(sp);
-							int index = 0;
-							for (String token : tokens) {
-								if (index > 0 && token.length() > 1) {
-									fileContent.append(token + " ");
-								}
-
-								if (index == 1) {
-									String cmd = sp[1].trim();
-									if (features.contains(cmd)) {
-										lineCmds.add(cmd);
-									}
-								}
-
-								index++;
-							}
-
-							fileContent.append(newLine);
-						}
-						in.close();
-						String content = fileContent.toString();
-						fileContent.setLength(0);
-
-						// get term frequency
-						// Hashtable<String, Integer> tfMap =
-						// getTermFreqByLucene(content);
-
-						// check if each feature exists
-						// for (String feature : features) {
-						// // int termFreq = countTermFreqByRegEx(feature,
-						// // content);
-						// int termFreq = 0;
-						// if (tfMap.containsKey(feature)) {
-						// termFreq = tfMap.get(feature);
-						// }
-						//
-						// resultStr.append(termFreq + ",");
-						//
-						// } // end of feature loop
-
-						// create ngrams
-						Hashtable<String, Integer> ngrams = getNgramFreqByLucene(
-								lineCmds, ngram);
+					Hashtable<String, Integer> ngrams = fileCmdNgramTable
+							.get(file);
+					if (ngrams != null) {
 						for (String c : cmdNgramFeatures) {
 							int freq = 0;
 							if (ngrams.containsKey(c))
 								freq = ngrams.get(c);
 
 							resultStr.append(freq + ",");
+							// System.out.println(c + ": " + freq);
 						}
-
-						// add label
-						resultStr.append(label + newLine);
-
-						if (resultStr.length() >= BUFFER_LENGTH) {
-							out.write(resultStr.toString());
-							out.flush();
-							resultStr.setLength(0);
-						}
-
-						System.out.println("Completed filtering file: " + file);
 					}
+
+					// add label
+					resultStr.append(label + newLine);
+
+					if (resultStr.length() >= BUFFER_LENGTH) {
+						out.write(resultStr.toString());
+						out.flush();
+						resultStr.setLength(0);
+					}
+
+					System.out.println("Completed filtering file: " + file);
 				} // end of label file loop
 
 			} // end of label loop
