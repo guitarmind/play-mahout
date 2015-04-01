@@ -78,11 +78,14 @@ public class InformationGainComputer {
 
 	public static void main(String[] args) throws Exception {
 
-		args = new String[4];
-		args[0] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
-		args[1] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/topN_infogain_20150327.txt";
-		args[3] = "500";
+		// args = new String[4];
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/train_bytes.csv";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/dataSample/topN_infogain_20150327.txt";
+		// args[3] = "500";
 
 		if (args.length < 4) {
 			System.out
