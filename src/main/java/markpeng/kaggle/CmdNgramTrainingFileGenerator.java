@@ -182,6 +182,9 @@ public class CmdNgramTrainingFileGenerator {
 				List<String> fileList = labels.get(label);
 
 				for (String file : fileList) {
+					// add fileName
+					resultStr.append(file + ",");
+
 					Hashtable<String, Integer> ngrams = fileCmdNgramTable
 							.get(file);
 					if (ngrams != null) {
