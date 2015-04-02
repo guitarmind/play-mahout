@@ -122,6 +122,7 @@ public class InformationGainComputer {
 				// get header
 				String header = in.readLine();
 				int featureN = header.split(",").length - 2;
+				System.out.println("featureN: " + featureN);
 
 				// count = 1 or 0
 				int[] trueCount = new int[featureN];
@@ -136,17 +137,30 @@ public class InformationGainComputer {
 					String raw = tmp[tmp.length - 1];
 					if (raw.contains("class"))
 						tmp[tmp.length - 1] = tmp[tmp.length - 1].substring(5);
+					// System.out.println("class label: " + tmp[tmp.length -
+					// 1]);
+
 					int label = Integer.parseInt(tmp[tmp.length - 1]) - 1;
 					int index = 0;
 					for (int j = 1; j < tmp.length - 1; j++) {
 						int value = Integer.parseInt(tmp[j]);
+						// System.out.println("value:" + value);
 						if (value > 0) {
-							trueCount[index]++;
-							classTrueCount[index][label]++;
+							trueCount[index] = trueCount[index] + 1;
+							classTrueCount[index][label] = classTrueCount[index][label] + 1;
 						} else {
-							falseCount[index]++;
-							classFalseCount[index][label]++;
+							falseCount[index] = falseCount[index] + 1;
+							classFalseCount[index][label] = classFalseCount[index][label] + 1;
 						}
+
+						// System.out.println("trueCount[" + index + "]:"
+						// + trueCount[index]);
+						// System.out.println("classTrueCount[" + index + "]["
+						// + label + "]:" + classTrueCount[index][label]);
+						// System.out.println("falseCount[" + index + "]:"
+						// + falseCount[index]);
+						// System.out.println("classFalseCount[" + index + "]["
+						// + label + "]:" + classFalseCount[index][label]);
 
 						index++;
 					}
@@ -158,25 +172,32 @@ public class InformationGainComputer {
 					for (int i = 0; i < 2; i++) {
 						if (i == 0) {
 							double trueProb = (double) trueCount[n] / trainN;
+							System.out.println("trueProb: " + trueProb);
 							for (int j = 0; j < 9; j++) {
 								double probVC = (double) classTrueCount[n][j]
 										/ classSize[j];
+								System.out.println("probVC: " + probVC);
 								double value = probVC
-										* Math.log(probVC
+										* Math.log((double) probVC
 												/ (trueProb * classProb[j]));
-
-								infoGain += value;
+								if (!Double.isInfinite(value)
+										&& !Double.isNaN(value))
+									infoGain += value;
 							} // end of class loop
 						} else {
 							double falseProb = (double) falseCount[n] / trainN;
+							System.out.println("falseProb: " + falseProb);
 							for (int j = 0; j < 9; j++) {
 								double probVC = (double) classFalseCount[n][j]
 										/ classSize[j];
+								System.out.println("probVC: " + probVC);
 								double value = probVC
-										* Math.log(probVC
+										* Math.log((double) probVC
 												/ (falseProb * classProb[j]));
 
-								infoGain += value;
+								if (!Double.isInfinite(value)
+										&& !Double.isNaN(value))
+									infoGain += value;
 							} // end of class loop
 						}
 					} // end of value loop
