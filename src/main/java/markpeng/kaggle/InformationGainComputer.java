@@ -140,7 +140,7 @@ public class InformationGainComputer {
 					int index = 0;
 					for (int j = 1; j < tmp.length - 1; j++) {
 						int value = Integer.parseInt(tmp[j]);
-						if (value == 1) {
+						if (value > 0) {
 							trueCount[index]++;
 							classTrueCount[index][label]++;
 						} else {
