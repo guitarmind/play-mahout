@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
@@ -121,7 +122,10 @@ public class InformationGainComputer {
 				String aLine = null;
 				// get header
 				String header = in.readLine();
-				int featureN = header.split(",").length - 2;
+				String[] splitted = header.split(",");
+				String[] featureNames = Arrays.copyOfRange(splitted, 1,
+						splitted.length - 1);
+				int featureN = featureNames.length;
 				System.out.println("featureN: " + featureN);
 
 				// count = 1 or 0
@@ -217,10 +221,12 @@ public class InformationGainComputer {
 
 					if (!Double.isInfinite(infoGain) && !Double.isNaN(infoGain)) {
 						if (validN < topN) {
-							outputStr.append(index + "," + infoGain);
+							outputStr.append(featureNames[index] + ","
+									+ infoGain);
 							outputStr.append(newLine);
 
-							System.out.println(index + "," + infoGain);
+							System.out.println(featureNames[index] + ","
+									+ infoGain);
 
 							if (outputStr.length() >= BUFFER_LENGTH) {
 								out.write(outputStr.toString());
