@@ -79,7 +79,7 @@ public class InformationGainComputer {
 	public static void main(String[] args) throws Exception {
 
 		// System.out.println(Integer.MAX_VALUE - 5);
-		
+
 		// args = new String[4];
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Microsoft Malware Classification/trainLabels.csv";
@@ -99,8 +99,8 @@ public class InformationGainComputer {
 		String outputFile = args[2];
 		int topN = Integer.parseInt(args[3]);
 		int trainN = 10868;
-		int byteFeatureN = (int) Math.pow(256, 2);
-		System.out.println("Bytes feature size: " + byteFeatureN);
+		// int byteFeatureN = (int) Math.pow(256, 2);
+		// System.out.println("Bytes feature size: " + byteFeatureN);
 
 		StringBuffer outputStr = new StringBuffer();
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
@@ -114,20 +114,22 @@ public class InformationGainComputer {
 				classProb[i] = (double) classSize[i] / trainN;
 			}
 
-			// count = 1 or 0
-			int[] trueCount = new int[byteFeatureN];
-			int[] falseCount = new int[byteFeatureN];
-			int[][] classTrueCount = new int[byteFeatureN][9];
-			int[][] classFalseCount = new int[byteFeatureN][9];
-			TreeMap<Integer, Double> infoGainTable = new TreeMap<Integer, Double>();
-
 			// read csv file
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					new FileInputStream(csvFile), "UTF-8"));
 			try {
 				String aLine = null;
-				// skip header
-				aLine = in.readLine();
+				// get header
+				String header = in.readLine();
+				int featureN = header.split(",").length - 2;
+
+				// count = 1 or 0
+				int[] trueCount = new int[featureN];
+				int[] falseCount = new int[featureN];
+				int[][] classTrueCount = new int[featureN][9];
+				int[][] classFalseCount = new int[featureN][9];
+				TreeMap<Integer, Double> infoGainTable = new TreeMap<Integer, Double>();
+
 				while ((aLine = in.readLine()) != null) {
 					String[] tmp = aLine.trim().split(",");
 					// String fileName = tmp[0];
@@ -149,72 +151,73 @@ public class InformationGainComputer {
 						index++;
 					}
 				}
+
+				// compute information gain
+				for (int n = 0; n < featureN; n++) {
+					double infoGain = 0.0;
+					for (int i = 0; i < 2; i++) {
+						if (i == 0) {
+							double trueProb = (double) trueCount[n] / trainN;
+							for (int j = 0; j < 9; j++) {
+								double probVC = (double) classTrueCount[n][j]
+										/ classSize[j];
+								double value = probVC
+										* Math.log(probVC
+												/ (trueProb * classProb[j]));
+
+								infoGain += value;
+							} // end of class loop
+						} else {
+							double falseProb = (double) falseCount[n] / trainN;
+							for (int j = 0; j < 9; j++) {
+								double probVC = (double) classFalseCount[n][j]
+										/ classSize[j];
+								double value = probVC
+										* Math.log(probVC
+												/ (falseProb * classProb[j]));
+
+								infoGain += value;
+							} // end of class loop
+						}
+					} // end of value loop
+
+					System.out.println("Completed feature " + n + ": "
+							+ infoGain);
+
+					infoGainTable.put(n, infoGain);
+				} // end of ngram loop
+
+				// get top-N features
+				SortedSet<Map.Entry<Integer, Double>> sortedFeatures = entriesSortedByValues(infoGainTable);
+				int validN = 0;
+				for (Map.Entry<Integer, Double> m : sortedFeatures) {
+					int index = m.getKey();
+					double infoGain = m.getValue();
+
+					if (!Double.isInfinite(infoGain) && !Double.isNaN(infoGain)) {
+						if (validN < topN) {
+							outputStr.append(index + "," + infoGain);
+							outputStr.append(newLine);
+
+							System.out.println(index + "," + infoGain);
+
+							if (outputStr.length() >= BUFFER_LENGTH) {
+								out.write(outputStr.toString());
+								out.flush();
+								outputStr.setLength(0);
+							}
+
+						} else
+							break;
+
+						validN++;
+					}
+				} // end of feature loop
+
+				System.out.println("Total # of features: " + validN);
 			} finally {
 				in.close();
 			}
-
-			// compute information gain
-			for (int n = 0; n < byteFeatureN; n++) {
-				double infoGain = 0.0;
-				for (int i = 0; i < 2; i++) {
-					if (i == 0) {
-						double trueProb = (double) trueCount[n] / trainN;
-						for (int j = 0; j < 9; j++) {
-							double probVC = (double) classTrueCount[n][j]
-									/ classSize[j];
-							double value = probVC
-									* Math.log(probVC
-											/ (trueProb * classProb[j]));
-
-							infoGain += value;
-						} // end of class loop
-					} else {
-						double falseProb = (double) falseCount[n] / trainN;
-						for (int j = 0; j < 9; j++) {
-							double probVC = (double) classFalseCount[n][j]
-									/ classSize[j];
-							double value = probVC
-									* Math.log(probVC
-											/ (falseProb * classProb[j]));
-
-							infoGain += value;
-						} // end of class loop
-					}
-				} // end of value loop
-
-				System.out.println("Completed feature " + n + ": " + infoGain);
-
-				infoGainTable.put(n, infoGain);
-			} // end of ngram loop
-
-			// get top-N features
-			SortedSet<Map.Entry<Integer, Double>> sortedFeatures = entriesSortedByValues(infoGainTable);
-			int validN = 0;
-			for (Map.Entry<Integer, Double> m : sortedFeatures) {
-				int index = m.getKey();
-				double infoGain = m.getValue();
-
-				if (!Double.isInfinite(infoGain) && !Double.isNaN(infoGain)) {
-					if (validN < topN) {
-						outputStr.append(index + "," + infoGain);
-						outputStr.append(newLine);
-
-						System.out.println(index + "," + infoGain);
-
-						if (outputStr.length() >= BUFFER_LENGTH) {
-							out.write(outputStr.toString());
-							out.flush();
-							outputStr.setLength(0);
-						}
-
-					} else
-						break;
-
-					validN++;
-				}
-			} // end of feature loop
-
-			System.out.println("Total # of features: " + validN);
 
 		} finally {
 			out.write(outputStr.toString());
