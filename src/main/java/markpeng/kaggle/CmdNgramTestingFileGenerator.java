@@ -61,6 +61,9 @@ public class CmdNgramTestingFileGenerator {
 			String... featureFiles) throws Exception {
 		List<String> features = readFeature(featureFiles);
 
+		System.out.println("Total # of cmd line ngram features: "
+				+ features.size());
+
 		StringBuffer resultStr = new StringBuffer();
 
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
@@ -120,13 +123,19 @@ public class CmdNgramTestingFileGenerator {
 						Hashtable<String, Integer> ngrams = getNgramFreqByLucene(
 								lineCmds, ngram);
 						if (ngrams != null) {
+							int cIndex = 0;
 							for (String c : features) {
 								int freq = 0;
 								if (ngrams.containsKey(c))
 									freq = ngrams.get(c);
 
-								resultStr.append(freq + ",");
+								if (cIndex < features.size() - 1)
+									resultStr.append(freq + ",");
+								else
+									resultStr.append(freq + newLine);
 								// System.out.println(c + ": " + freq);
+
+								cIndex++;
 							}
 						}
 
