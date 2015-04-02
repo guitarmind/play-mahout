@@ -224,40 +224,6 @@ public class CmdNgramTrainingFileGenerator {
 		}
 	}
 
-	private Hashtable<String, Integer> getTermFreqByLucene(String text)
-			throws IOException {
-		Hashtable<String, Integer> result = new Hashtable<String, Integer>();
-
-		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
-				new StringReader(text));
-		try {
-			CharTermAttribute termAtt = ts
-					.addAttribute(CharTermAttribute.class);
-			ts.reset();
-			int wordCount = 0;
-			while (ts.incrementToken()) {
-				if (termAtt.length() > 0) {
-					String word = termAtt.toString();
-
-					if (result.get(word) == null)
-						result.put(word, 1);
-					else {
-						result.put(word, result.get(word) + 1);
-					}
-
-					wordCount++;
-				}
-			}
-
-		} finally {
-			// Fixed error : close ts:TokenStream
-			ts.end();
-			ts.close();
-		}
-
-		return result;
-	}
-
 	private Hashtable<String, Integer> getNgramFreqByLucene(
 			List<String> lineCmds, int ngram) throws IOException {
 		Hashtable<String, Integer> result = new Hashtable<String, Integer>();
