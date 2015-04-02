@@ -37,9 +37,16 @@ public class CmdNgramTestingFileGenerator {
 			try {
 				String aLine = null;
 				while ((aLine = in.readLine()) != null) {
-					String tmp = aLine.replace("_", " ").trim();
-					if (tmp.length() > 0)
-						features.add(tmp);
+					if (aLine.contains(",")) {
+						String tmp = aLine.split(",")[0];
+						tmp = tmp.replace("_", " ").trim();
+						if (tmp.length() > 0)
+							features.add(tmp);
+					} else {
+						String tmp = aLine.replace("_", " ").trim();
+						if (tmp.length() > 0)
+							features.add(tmp);
+					}
 				}
 			} finally {
 				in.close();
