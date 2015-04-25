@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
@@ -108,9 +109,12 @@ public class SentimentFeatureGenerator {
 				String headline = tokens[3].replace("\"", "").trim();
 				String abst = tokens[5].replace("\"", "").trim();
 
+				List<String> htokens = Arrays.asList(headline.split("\\s"));
+				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+
 				int sIndex = 0;
 				for (String s : popSentiments) {
-					if (headline.contains(s) || abst.contains(s)) {
+					if (htokens.contains(s) || abtokens.contains(s)) {
 						rowResult[sIndex] = 1;
 						System.out.println(s + " ==> " + headline + "," + abst);
 					}
@@ -249,9 +253,12 @@ public class SentimentFeatureGenerator {
 				String headline = tokens[3].replace("\"", "").trim();
 				String abst = tokens[5].replace("\"", "").trim();
 
+				List<String> htokens = Arrays.asList(headline.split("\\s"));
+				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+
 				int sIndex = 0;
 				for (String s : popSentiments) {
-					if (headline.contains(s) || abst.contains(s)) {
+					if (htokens.contains(s) || abtokens.contains(s)) {
 						rowResult[sIndex] = 1;
 						System.out.println(s + " ==> " + headline + "," + abst);
 					}
@@ -370,14 +377,20 @@ public class SentimentFeatureGenerator {
 				String abst = tokens[5].replace("\"", "").trim();
 				String popular = tokens[tokens.length - 2];
 
+				List<String> htokens = Arrays.asList(headline.split("\\s"));
+				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+
+				int sIndex = 0;
 				for (String s : sentiments) {
-					if ((headline.contains(s) || abst.contains(s))
+					if ((htokens.contains(s) || abtokens.contains(s))
 							&& popular.equals("1")) {
 						if (!sentiTable.containsKey(s))
 							sentiTable.put(s, 1);
 						else
 							sentiTable.put(s, sentiTable.get(s) + 1);
 					}
+
+					sIndex++;
 				}
 			}
 
@@ -401,8 +414,11 @@ public class SentimentFeatureGenerator {
 				String headline = tokens[3].replace("\"", "").trim();
 				String abst = tokens[5].replace("\"", "").trim();
 
+				List<String> htokens = Arrays.asList(headline.split("\\s"));
+				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+
 				for (String t : sentiTable.keySet()) {
-					if (headline.contains(t) || abst.contains(t)) {
+					if (htokens.contains(t) || abtokens.contains(t)) {
 						if (!newFeatures.contains(t))
 							newFeatures.add(t);
 					}
