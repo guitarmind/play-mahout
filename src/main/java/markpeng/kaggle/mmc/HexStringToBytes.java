@@ -1,4 +1,4 @@
-package markpeng.kaggle;
+package markpeng.kaggle.mmc;
 
 public class HexStringToBytes {
 

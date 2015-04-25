@@ -1,4 +1,4 @@
-package markpeng.kaggle;
+package markpeng.kaggle.mmc;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -21,52 +21,55 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
-public class FeatureBasedBigramBytesTrainingFileGenerator {
+public class FeatureBasedBigramBytesTestingFileGenerator {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
-	public FeatureBasedBigramBytesTrainingFileGenerator() {
+	public FeatureBasedBigramBytesTestingFileGenerator() {
 	}
 
-	public void generatCSV(String trainLabelFile, String folderName,
-			String featureFile, String outputCsv, boolean filtered, int ngram)
-			throws Exception {
+	public void generatCSV(String testFolder, String featureFile,
+			String outputCsv, boolean filtered, int ngram) throws Exception {
 		StringBuffer resultStr = new StringBuffer();
 
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(outputCsv, false), "UTF-8"));
 
-		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
 		List<Integer> features = readFeatures(featureFile);
 
 		try {
 
-			// add header line
-			resultStr.append("fileName,");
-			for (int i = 0; i < features.size(); i++) {
-				resultStr.append(features.get(i) + ",");
-			}
-			resultStr.append("classLabel" + newLine);
+			File checker = new File(testFolder);
+			if (checker.exists()) {
+				// get all test file path
+				List<String> testFiles = new ArrayList<String>();
+				for (final File fileEntry : checker.listFiles()) {
+					if (fileEntry.getName().contains(".bytes_filtered")) {
+						String tmp = fileEntry.getAbsolutePath();
+						testFiles.add(tmp);
+					}
+				}
 
-			for (String label : labels.keySet()) {
-				List<String> fileList = labels.get(label);
-
-				for (String file : fileList) {
-					File f = null;
-					if (filtered)
-						// f = new File(folderName + "/" + file
-						// + ".bytes_filtered");
-						f = new File(folderName + "/" + label + "/" + file
-								+ ".bytes_filtered");
+				// add header line
+				resultStr.append("fileName,");
+				for (int i = 0; i < features.size(); i++) {
+					if (i < features.size() - 1)
+						resultStr.append(features.get(i) + ",");
 					else
-						f = new File(folderName + "/" + file + ".bytes");
+						resultStr.append(features.get(i) + newLine);
+				}
+
+				for (String file : testFiles) {
+					File f = new File(file);
+					String fileName = f.getName().trim();
+					fileName = fileName.substring(0, fileName.lastIndexOf("."));
 
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
 						// add fileName
-						resultStr.append(file + ",");
+						resultStr.append(fileName + ",");
 
 						List<String> tokens = new ArrayList<String>();
 						String aLine = null;
@@ -95,13 +98,17 @@ public class FeatureBasedBigramBytesTrainingFileGenerator {
 									table[features.indexOf(code)] = 1;
 							}
 						}
-						for (long l : table)
-							resultStr.append(l + ",");
+						int index = 0;
+						for (long l : table) {
+							if (index < table.length - 1)
+								resultStr.append(l + ",");
+							else
+								resultStr.append(l + newLine);
+
+							index++;
+						}
 
 						tokens.clear();
-
-						// add label
-						resultStr.append(label + newLine);
 
 						if (resultStr.length() >= BUFFER_LENGTH) {
 							out.write(resultStr.toString());
@@ -200,21 +207,19 @@ public class FeatureBasedBigramBytesTrainingFileGenerator {
 		// args[3] = "true";
 		// args[4] = "2";
 
-		if (args.length < 6) {
+		if (args.length < 5) {
 			System.out
-					.println("Arguments: [train folder] [train label file] [feature file] [output csv] [filtered] [ngram]");
+					.println("Arguments: [test folder] [feature file] [output csv] [filtered] [ngram]");
 			return;
 		}
-		String trainFolder = args[0];
-		String trainLabelFile = args[1];
-		String featureFile = args[2];
-		String outputCsv = args[3];
-		boolean filterred = Boolean.parseBoolean(args[4]);
-		int ngram = Integer.parseInt(args[5]);
+		String testFolder = args[0];
+		String featureFile = args[1];
+		String outputCsv = args[2];
+		boolean filterred = Boolean.parseBoolean(args[3]);
+		int ngram = Integer.parseInt(args[4]);
 
-		FeatureBasedBytesTrainingFileGenerator worker = new FeatureBasedBytesTrainingFileGenerator();
-		worker.generatCSV(trainLabelFile, trainFolder, featureFile, outputCsv,
-				filterred, ngram);
+		FeatureBasedBigramBytesTestingFileGenerator worker = new FeatureBasedBigramBytesTestingFileGenerator();
+		worker.generatCSV(testFolder, featureFile, outputCsv, filterred, ngram);
 
 	}
 }

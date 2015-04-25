@@ -1,4 +1,4 @@
-package markpeng.kaggle;
+package markpeng.kaggle.mmc;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -21,53 +21,52 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
-public class BytesTestingFileGenerator {
+public class FeatureBasedBigramBytesTrainingFileGenerator {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
-	public BytesTestingFileGenerator() {
+	public FeatureBasedBigramBytesTrainingFileGenerator() {
 	}
 
-	public void generatCSV(String testFolder, String outputCsv,
-			boolean filtered, int ngram) throws Exception {
+	public void generatCSV(String trainLabelFile, String folderName,
+			String featureFile, String outputCsv, boolean filtered, int ngram)
+			throws Exception {
 		StringBuffer resultStr = new StringBuffer();
 
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(outputCsv, false), "UTF-8"));
 
+		Hashtable<String, List<String>> labels = readTrainLabel(trainLabelFile);
+		List<Integer> features = readFeatures(featureFile);
+
 		try {
 
-			File checker = new File(testFolder);
-			if (checker.exists()) {
-				// get all test file path
-				List<String> testFiles = new ArrayList<String>();
-				for (final File fileEntry : checker.listFiles()) {
-					if (fileEntry.getName().contains(".bytes_filtered")) {
-						String tmp = fileEntry.getAbsolutePath();
-						testFiles.add(tmp);
-					}
-				}
+			// add header line
+			resultStr.append("fileName,");
+			for (int i = 0; i < features.size(); i++) {
+				resultStr.append(features.get(i) + ",");
+			}
+			resultStr.append("classLabel" + newLine);
 
-				// add header line
-				resultStr.append("fileName,");
-				for (int i = 0; i <= 65535; i++) {
-					if (i < 65535)
-						resultStr.append(i + ",");
+			for (String label : labels.keySet()) {
+				List<String> fileList = labels.get(label);
+
+				for (String file : fileList) {
+					File f = null;
+					if (filtered)
+						// f = new File(folderName + "/" + file
+						// + ".bytes_filtered");
+						f = new File(folderName + "/" + label + "/" + file
+								+ ".bytes_filtered");
 					else
-						resultStr.append(i + newLine);
-				}
-
-				for (String file : testFiles) {
-					File f = new File(file);
-					String fileName = f.getName().trim();
-					fileName = fileName.substring(0, fileName.lastIndexOf("."));
+						f = new File(folderName + "/" + file + ".bytes");
 
 					System.out.println("Loading " + f.getAbsolutePath());
 					if (f.exists()) {
 
 						// add fileName
-						resultStr.append(fileName + ",");
+						resultStr.append(file + ",");
 
 						List<String> tokens = new ArrayList<String>();
 						String aLine = null;
@@ -86,25 +85,23 @@ public class BytesTestingFileGenerator {
 						in.close();
 
 						// get doc frequency of n-byte sequence
-						long[] table = new long[65536];
+						int[] table = new int[features.size()];
 						for (int i = 0; i < tokens.size(); i++) {
 							if (i % 2 == 0 && (i + 1) < tokens.size()) {
 								String seq = tokens.get(i) + tokens.get(i + 1);
 								int code = Integer.parseInt(seq, 16);
-								table[code] = 1;
+
+								if (features.contains(code))
+									table[features.indexOf(code)] = 1;
 							}
 						}
-						int index = 0;
-						for (long l : table) {
-							if (index < table.length - 1)
-								resultStr.append(l + ",");
-							else
-								resultStr.append(l + newLine);
-
-							index++;
-						}
+						for (long l : table)
+							resultStr.append(l + ",");
 
 						tokens.clear();
+
+						// add label
+						resultStr.append(label + newLine);
 
 						if (resultStr.length() >= BUFFER_LENGTH) {
 							out.write(resultStr.toString());
@@ -167,38 +164,28 @@ public class BytesTestingFileGenerator {
 		return output;
 	}
 
-	private Hashtable<String, Integer> getTermFreqByLucene(String text)
-			throws IOException {
-		Hashtable<String, Integer> result = new Hashtable<String, Integer>();
+	public static List<Integer> readFeatures(String featureFile)
+			throws Exception {
+		List<Integer> output = new ArrayList<Integer>();
 
-		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
-				new StringReader(text));
+		BufferedReader in = new BufferedReader(new InputStreamReader(
+				new FileInputStream(featureFile), "UTF-8"));
+
 		try {
-			CharTermAttribute termAtt = ts
-					.addAttribute(CharTermAttribute.class);
-			ts.reset();
-			int wordCount = 0;
-			while (ts.incrementToken()) {
-				if (termAtt.length() > 0) {
-					String word = termAtt.toString();
-
-					if (result.get(word) == null)
-						result.put(word, 1);
-					else {
-						result.put(word, result.get(word) + 1);
-					}
-
-					wordCount++;
+			String aLine = null;
+			while ((aLine = in.readLine()) != null) {
+				String[] sp = aLine.split(",");
+				if (sp != null && sp.length > 0) {
+					int feature = Integer.parseInt(sp[0]);
+					if (!output.contains(feature))
+						output.add(feature);
 				}
 			}
-
 		} finally {
-			// Fixed error : close ts:TokenStream
-			ts.end();
-			ts.close();
+			in.close();
 		}
 
-		return result;
+		return output;
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -213,18 +200,21 @@ public class BytesTestingFileGenerator {
 		// args[3] = "true";
 		// args[4] = "2";
 
-		if (args.length < 4) {
+		if (args.length < 6) {
 			System.out
-					.println("Arguments: [test folder] [output csv] [filtered] [ngram]");
+					.println("Arguments: [train folder] [train label file] [feature file] [output csv] [filtered] [ngram]");
 			return;
 		}
-		String testFolder = args[0];
-		String outputCsv = args[1];
-		boolean filterred = Boolean.parseBoolean(args[2]);
-		int ngram = Integer.parseInt(args[3]);
+		String trainFolder = args[0];
+		String trainLabelFile = args[1];
+		String featureFile = args[2];
+		String outputCsv = args[3];
+		boolean filterred = Boolean.parseBoolean(args[4]);
+		int ngram = Integer.parseInt(args[5]);
 
-		BytesTestingFileGenerator worker = new BytesTestingFileGenerator();
-		worker.generatCSV(testFolder, outputCsv, filterred, ngram);
+		FeatureBasedBytesTrainingFileGenerator worker = new FeatureBasedBytesTrainingFileGenerator();
+		worker.generatCSV(trainLabelFile, trainFolder, featureFile, outputCsv,
+				filterred, ngram);
 
 	}
 }

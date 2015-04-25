@@ -1,4 +1,4 @@
-package markpeng.kaggle;
+package markpeng.kaggle.mmc;
 
 import java.io.BufferedWriter;
 import java.io.File;

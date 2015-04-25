@@ -1,4 +1,4 @@
-package markpeng.kaggle;
+package markpeng.kaggle.mmc;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -21,22 +21,20 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
-public class FeatureBasedBigramBytesTestingFileGenerator {
+public class BytesTestingFileGenerator {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
-	public FeatureBasedBigramBytesTestingFileGenerator() {
+	public BytesTestingFileGenerator() {
 	}
 
-	public void generatCSV(String testFolder, String featureFile,
-			String outputCsv, boolean filtered, int ngram) throws Exception {
+	public void generatCSV(String testFolder, String outputCsv,
+			boolean filtered, int ngram) throws Exception {
 		StringBuffer resultStr = new StringBuffer();
 
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(outputCsv, false), "UTF-8"));
-
-		List<Integer> features = readFeatures(featureFile);
 
 		try {
 
@@ -53,11 +51,11 @@ public class FeatureBasedBigramBytesTestingFileGenerator {
 
 				// add header line
 				resultStr.append("fileName,");
-				for (int i = 0; i < features.size(); i++) {
-					if (i < features.size() - 1)
-						resultStr.append(features.get(i) + ",");
+				for (int i = 0; i <= 65535; i++) {
+					if (i < 65535)
+						resultStr.append(i + ",");
 					else
-						resultStr.append(features.get(i) + newLine);
+						resultStr.append(i + newLine);
 				}
 
 				for (String file : testFiles) {
@@ -88,14 +86,12 @@ public class FeatureBasedBigramBytesTestingFileGenerator {
 						in.close();
 
 						// get doc frequency of n-byte sequence
-						int[] table = new int[features.size()];
+						long[] table = new long[65536];
 						for (int i = 0; i < tokens.size(); i++) {
 							if (i % 2 == 0 && (i + 1) < tokens.size()) {
 								String seq = tokens.get(i) + tokens.get(i + 1);
 								int code = Integer.parseInt(seq, 16);
-
-								if (features.contains(code))
-									table[features.indexOf(code)] = 1;
+								table[code] = 1;
 							}
 						}
 						int index = 0;
@@ -171,28 +167,38 @@ public class FeatureBasedBigramBytesTestingFileGenerator {
 		return output;
 	}
 
-	public static List<Integer> readFeatures(String featureFile)
-			throws Exception {
-		List<Integer> output = new ArrayList<Integer>();
+	private Hashtable<String, Integer> getTermFreqByLucene(String text)
+			throws IOException {
+		Hashtable<String, Integer> result = new Hashtable<String, Integer>();
 
-		BufferedReader in = new BufferedReader(new InputStreamReader(
-				new FileInputStream(featureFile), "UTF-8"));
-
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
 		try {
-			String aLine = null;
-			while ((aLine = in.readLine()) != null) {
-				String[] sp = aLine.split(",");
-				if (sp != null && sp.length > 0) {
-					int feature = Integer.parseInt(sp[0]);
-					if (!output.contains(feature))
-						output.add(feature);
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+
+					if (result.get(word) == null)
+						result.put(word, 1);
+					else {
+						result.put(word, result.get(word) + 1);
+					}
+
+					wordCount++;
 				}
 			}
+
 		} finally {
-			in.close();
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
 		}
 
-		return output;
+		return result;
 	}
 
 	public static void main(String[] args) throws Exception {
@@ -207,19 +213,18 @@ public class FeatureBasedBigramBytesTestingFileGenerator {
 		// args[3] = "true";
 		// args[4] = "2";
 
-		if (args.length < 5) {
+		if (args.length < 4) {
 			System.out
-					.println("Arguments: [test folder] [feature file] [output csv] [filtered] [ngram]");
+					.println("Arguments: [test folder] [output csv] [filtered] [ngram]");
 			return;
 		}
 		String testFolder = args[0];
-		String featureFile = args[1];
-		String outputCsv = args[2];
-		boolean filterred = Boolean.parseBoolean(args[3]);
-		int ngram = Integer.parseInt(args[4]);
+		String outputCsv = args[1];
+		boolean filterred = Boolean.parseBoolean(args[2]);
+		int ngram = Integer.parseInt(args[3]);
 
-		FeatureBasedBigramBytesTestingFileGenerator worker = new FeatureBasedBigramBytesTestingFileGenerator();
-		worker.generatCSV(testFolder, featureFile, outputCsv, filterred, ngram);
+		BytesTestingFileGenerator worker = new BytesTestingFileGenerator();
+		worker.generatCSV(testFolder, outputCsv, filterred, ngram);
 
 	}
 }

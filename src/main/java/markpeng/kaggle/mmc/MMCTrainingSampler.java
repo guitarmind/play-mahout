@@ -1,4 +1,4 @@
-package markpeng.kaggle;
+package markpeng.kaggle.mmc;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
