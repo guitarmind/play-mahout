@@ -393,7 +393,10 @@ public class SentimentFeatureGenerator {
 		resultStr.append("yearNumWithSemi,");
 		resultStr.append("yearNum,");
 		resultStr.append("recap,");
-		resultStr.append("report");
+		resultStr.append("report,");
+		resultStr.append("semimark,");
+		resultStr.append("htokens,");
+		resultStr.append("abtokens");
 		resultStr.append(newLine);
 
 		try {
@@ -403,7 +406,7 @@ public class SentimentFeatureGenerator {
 			trainIn.readLine();
 			while ((aLine = trainIn.readLine()) != null) {
 				int[] rowResult = new int[popSentiments.size()
-						+ prefixFeatures.size() + 12];
+						+ prefixFeatures.size() + 15];
 
 				String tmp = aLine.toLowerCase().trim();
 				String[] tokens = tmp.split(",");
@@ -415,7 +418,8 @@ public class SentimentFeatureGenerator {
 
 				int sIndex = 0;
 				for (String s : popSentiments) {
-					if (htokens.contains(s) || abtokens.contains(s)) {
+					if (htokens.contains(s)) {
+						// if (htokens.contains(s) || abtokens.contains(s)) {
 						rowResult[sIndex] = 1;
 						System.out.println(s + " ==> " + headline + "," + abst);
 					}
@@ -485,6 +489,16 @@ public class SentimentFeatureGenerator {
 				if (headline.contains("report"))
 					rowResult[otherStart + 11] = 1;
 
+				// semicolon
+				if (headline.contains(":"))
+					rowResult[otherStart + 12] = 1;
+
+				// header token size
+				rowResult[otherStart + 13] = htokens.size();
+
+				// abstract token size
+				rowResult[otherStart + 14] = abtokens.size();
+
 				// append output row
 				int vIndex = 0;
 				for (Integer v : rowResult) {
@@ -539,7 +553,10 @@ public class SentimentFeatureGenerator {
 			resultStr.append("yearNumWithSemi,");
 			resultStr.append("yearNum,");
 			resultStr.append("recap,");
-			resultStr.append("report");
+			resultStr.append("report,");
+			resultStr.append("semimark,");
+			resultStr.append("htokens,");
+			resultStr.append("abtokens");
 			resultStr.append(newLine);
 
 			String aLine = null;
@@ -547,7 +564,7 @@ public class SentimentFeatureGenerator {
 			testIn.readLine();
 			while ((aLine = testIn.readLine()) != null) {
 				int[] rowResult = new int[popSentiments.size()
-						+ prefixFeatures.size() + 12];
+						+ prefixFeatures.size() + 15];
 
 				String tmp = aLine.toLowerCase().trim();
 				String[] tokens = tmp.split(",");
@@ -559,7 +576,8 @@ public class SentimentFeatureGenerator {
 
 				int sIndex = 0;
 				for (String s : popSentiments) {
-					if (htokens.contains(s) || abtokens.contains(s)) {
+					if (htokens.contains(s)) {
+						// if (htokens.contains(s) || abtokens.contains(s)) {
 						rowResult[sIndex] = 1;
 						System.out.println(s + " ==> " + headline + "," + abst);
 					}
@@ -628,6 +646,16 @@ public class SentimentFeatureGenerator {
 				if (headline.contains("report"))
 					rowResult[otherStart + 11] = 1;
 
+				// semicolon
+				if (headline.contains(":"))
+					rowResult[otherStart + 12] = 1;
+
+				// header token size
+				rowResult[otherStart + 13] = htokens.size();
+
+				// abstract token size
+				rowResult[otherStart + 14] = abtokens.size();
+
 				// append output row
 				int vIndex = 0;
 				for (Integer v : rowResult) {
@@ -679,12 +707,13 @@ public class SentimentFeatureGenerator {
 				String popular = tokens[tokens.length - 2];
 
 				List<String> htokens = Arrays.asList(headline.split("\\s"));
-				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+				// List<String> abtokens = Arrays.asList(abst.split("\\s"));
 
 				int sIndex = 0;
 				for (String s : sentiments) {
-					if ((htokens.contains(s) || abtokens.contains(s))
-							&& popular.equals("1")) {
+					// if ((htokens.contains(s) || abtokens.contains(s) &&
+					// popular.equals("1"))
+					if (htokens.contains(s)) {
 						if (!sentiTable.containsKey(s))
 							sentiTable.put(s, 1);
 						else
@@ -716,10 +745,11 @@ public class SentimentFeatureGenerator {
 				String abst = tokens[5].replace("\"", "").trim();
 
 				List<String> htokens = Arrays.asList(headline.split("\\s"));
-				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+				// List<String> abtokens = Arrays.asList(abst.split("\\s"));
 
 				for (String t : sentiTable.keySet()) {
-					if (htokens.contains(t) || abtokens.contains(t)) {
+					if (htokens.contains(t)) {
+						// if (htokens.contains(t) || abtokens.contains(t)) {
 						if (!newFeatures.contains(t))
 							newFeatures.add(t);
 					}
@@ -830,16 +860,16 @@ public class SentimentFeatureGenerator {
 		args[0] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/NYTimesBlogTrain.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/NYTimesBlogTest.csv";
 		args[2] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentiment/AFINN-111.txt";
-		args[3] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/prefixSymbolTrain.csv";
-		args[4] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/prefixSymbolTest.csv";
+		// args[3] =
+		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/prefixSymbolTrain.csv";
+		// args[4] =
+		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/prefixSymbolTest.csv";
 		// args[3] =
 		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/specialTrain.csv";
 		// args[4] =
 		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/specialTest.csv";
-		// args[3] =
-		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTrain.csv";
-		// args[4] =
-		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTest.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTrain.csv";
+		args[4] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTest.csv";
 
 		if (args.length < 5) {
 			System.out
@@ -852,11 +882,10 @@ public class SentimentFeatureGenerator {
 		String outputTrain = args[3];
 		String outputTest = args[4];
 		SentimentFeatureGenerator worker = new SentimentFeatureGenerator();
-		worker.generatePrefixAndSymbol(trainFile, testFile, outputTrain,
-				outputTest);
-		// worker.generateSentiment(trainFile, testFile, outputTrain,
-		// outputTest,
-		// featureFiles);
+		// worker.generatePrefixAndSymbol(trainFile, testFile, outputTrain,
+		// outputTest);
+		worker.generateSentiment(trainFile, testFile, outputTrain, outputTest,
+				featureFiles);
 		// worker.prefixFeatureExtraction(trainFile, testFile);
 		// List<String> features = worker.readFeature(featureFiles);
 		// worker.sentimentFeatureExtraction(trainFile, testFile, features);
