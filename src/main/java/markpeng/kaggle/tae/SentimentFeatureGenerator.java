@@ -44,8 +44,309 @@ public class SentimentFeatureGenerator {
 		return features;
 	}
 
-	public void generate(String trainFile, String testFile, String outputTrain,
-			String outputTest, String... featureFiles) throws Exception {
+	public void generatePrefixAndSymbol(String trainFile, String testFile,
+			String outputTrain, String outputTest) throws Exception {
+
+		StringBuffer resultStr = new StringBuffer();
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		BufferedReader testIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(testFile), "UTF-8"));
+
+		BufferedWriter trainOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputTrain, false), "UTF-8"));
+
+		BufferedWriter testOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputTest, false), "UTF-8"));
+
+		// prefix with ':'
+		List<String> prefixFeatures = prefixFeatureExtraction(trainFile,
+				testFile);
+
+		// create headers
+		int p = 0;
+		for (String prefix : prefixFeatures) {
+			resultStr.append("Prefix_" + (p + 1) + ",");
+			p++;
+		}
+		resultStr.append("Five_Who,");
+		resultStr.append("Five_What,");
+		resultStr.append("Five_Where,");
+		resultStr.append("Five_When,");
+		resultStr.append("Five_How,");
+		resultStr.append("qmark,");
+		resultStr.append("exmark,");
+		resultStr.append("please,");
+		resultStr.append("yearNumWithSemi,");
+		resultStr.append("yearNum,");
+		resultStr.append("recap,");
+		resultStr.append("report,");
+		resultStr.append("semimark,");
+		resultStr.append("htokens,");
+		resultStr.append("abtokens");
+		resultStr.append(newLine);
+
+		try {
+
+			String aLine = null;
+			// skip header
+			trainIn.readLine();
+			while ((aLine = trainIn.readLine()) != null) {
+				int[] rowResult = new int[prefixFeatures.size() + 15];
+
+				String tmp = aLine.toLowerCase().trim();
+				String[] tokens = tmp.split(",");
+				String headline = tokens[3].replace("\"", "").trim();
+				String abst = tokens[5].replace("\"", "").trim();
+
+				List<String> htokens = Arrays.asList(headline.split("\\s"));
+				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+
+				// System.out.println(headline);
+
+				int hlength = headline.length();
+				if (headline.contains(":")
+						&& headline.indexOf(":") <= (hlength / 2)) {
+					String newFeature = headline.substring(0,
+							headline.indexOf(":")).trim();
+
+					int pIndex = 0;
+					for (String t : prefixFeatures) {
+						if (newFeature.equals(t))
+							rowResult[pIndex] = 1;
+
+						pIndex++;
+					}
+				}
+
+				int otherStart = prefixFeatures.size();
+				// who, what, where, when, how
+				if (headline.contains("who"))
+					rowResult[otherStart] = 1;
+				if (headline.contains("what"))
+					rowResult[otherStart + 1] = 1;
+				if (headline.contains("where"))
+					rowResult[otherStart + 2] = 1;
+				if (headline.contains("when"))
+					rowResult[otherStart + 3] = 1;
+				if (headline.contains("how"))
+					rowResult[otherStart + 4] = 1;
+
+				// question mark
+				if (headline.contains("?"))
+					rowResult[otherStart + 5] = 1;
+
+				// ! mark
+				if (headline.contains("!"))
+					rowResult[otherStart + 6] = 1;
+
+				// please
+				if (headline.contains("please"))
+					rowResult[otherStart + 7] = 1;
+
+				// contains a year number with a ':'
+				if (headline.matches("[0-9]{4,4}:.*")) {
+					rowResult[otherStart + 8] = 1;
+					// System.out.println(headline + " ==> yearNumWithSemi");
+				}
+
+				// contains a year number
+				if (headline.matches("[0-9]{4,4}.*")) {
+					rowResult[otherStart + 9] = 1;
+					// System.out.println(headline + " ==> yearNum");
+				}
+
+				// Recap
+				if (headline.contains("recap"))
+					rowResult[otherStart + 10] = 1;
+
+				// Report
+				if (headline.contains("report"))
+					rowResult[otherStart + 11] = 1;
+
+				// semicolon
+				if (headline.contains(":"))
+					rowResult[otherStart + 12] = 1;
+
+				// header token size
+				rowResult[otherStart + 13] = htokens.size();
+
+				// abstract token size
+				rowResult[otherStart + 14] = abtokens.size();
+
+				// append output row
+				int vIndex = 0;
+				for (Integer v : rowResult) {
+					if (vIndex < rowResult.length - 1)
+						resultStr.append(v + ",");
+					else
+						resultStr.append(v + newLine);
+					vIndex++;
+				}
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					trainOut.write(resultStr.toString());
+					trainOut.flush();
+					resultStr.setLength(0);
+				}
+
+			} // end of train file loop
+
+		} finally {
+			trainIn.close();
+
+			trainOut.write(resultStr.toString());
+			trainOut.flush();
+			trainOut.close();
+			resultStr.setLength(0);
+		}
+
+		// ---------------------------------------------------------------------------------------------------------------
+		// test dataset
+
+		try {
+			resultStr.setLength(0);
+			// create headers
+			p = 0;
+			for (String prefix : prefixFeatures) {
+				resultStr.append("Prefix_" + (p + 1) + ",");
+				p++;
+			}
+			resultStr.append("Five_Who,");
+			resultStr.append("Five_What,");
+			resultStr.append("Five_Where,");
+			resultStr.append("Five_When,");
+			resultStr.append("Five_How,");
+			resultStr.append("qmark,");
+			resultStr.append("exmark,");
+			resultStr.append("please,");
+			resultStr.append("yearNumWithSemi,");
+			resultStr.append("yearNum,");
+			resultStr.append("recap,");
+			resultStr.append("report,");
+			resultStr.append("semimark,");
+			resultStr.append("htokens,");
+			resultStr.append("abtokens");
+			resultStr.append(newLine);
+
+			String aLine = null;
+			// skip header
+			testIn.readLine();
+			while ((aLine = testIn.readLine()) != null) {
+				int[] rowResult = new int[prefixFeatures.size() + 15];
+
+				String tmp = aLine.toLowerCase().trim();
+				String[] tokens = tmp.split(",");
+				String headline = tokens[3].replace("\"", "").trim();
+				String abst = tokens[5].replace("\"", "").trim();
+
+				List<String> htokens = Arrays.asList(headline.split("\\s"));
+				List<String> abtokens = Arrays.asList(abst.split("\\s"));
+
+				// System.out.println(headline);
+				int hlength = headline.length();
+				if (headline.contains(":")
+						&& headline.indexOf(":") <= (hlength / 2)) {
+					String newFeature = headline.substring(0,
+							headline.indexOf(":")).trim();
+
+					int pIndex = 0;
+					for (String t : prefixFeatures) {
+						if (newFeature.equals(t))
+							rowResult[pIndex] = 1;
+
+						pIndex++;
+					}
+				}
+
+				int otherStart = prefixFeatures.size();
+				// who, what, where, when, how
+				if (headline.contains("who"))
+					rowResult[otherStart] = 1;
+				if (headline.contains("what"))
+					rowResult[otherStart + 1] = 1;
+				if (headline.contains("where"))
+					rowResult[otherStart + 2] = 1;
+				if (headline.contains("when"))
+					rowResult[otherStart + 3] = 1;
+				if (headline.contains("how"))
+					rowResult[otherStart + 4] = 1;
+
+				// question mark
+				if (headline.contains("?"))
+					rowResult[otherStart + 5] = 1;
+
+				// ! mark
+				if (headline.contains("!"))
+					rowResult[otherStart + 6] = 1;
+
+				// please
+				if (headline.contains("please"))
+					rowResult[otherStart + 7] = 1;
+
+				// contains a year number with a ':'
+				if (headline.matches("[0-9]{4,4}:.*")) {
+					rowResult[otherStart + 8] = 1;
+					System.out.println(headline + " ==> yearNumWithSemi");
+				}
+
+				// contains a year number
+				if (headline.matches("[0-9]{4,4}.*")) {
+					rowResult[otherStart + 9] = 1;
+					System.out.println(headline + " ==> yearNum");
+				}
+
+				// Recap
+				if (headline.contains("recap"))
+					rowResult[otherStart + 10] = 1;
+
+				// Report
+				if (headline.contains("report"))
+					rowResult[otherStart + 11] = 1;
+
+				// semicolon
+				if (headline.contains(":"))
+					rowResult[otherStart + 12] = 1;
+
+				// header token size
+				rowResult[otherStart + 13] = htokens.size();
+
+				// abstract token size
+				rowResult[otherStart + 14] = abtokens.size();
+
+				// append output row
+				int vIndex = 0;
+				for (Integer v : rowResult) {
+					if (vIndex < rowResult.length - 1)
+						resultStr.append(v + ",");
+					else
+						resultStr.append(v + newLine);
+					vIndex++;
+				}
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					testOut.write(resultStr.toString());
+					testOut.flush();
+					resultStr.setLength(0);
+				}
+
+			} // end of train file loop
+
+		} finally {
+			testIn.close();
+
+			testOut.write(resultStr.toString());
+			testOut.flush();
+			testOut.close();
+			resultStr.setLength(0);
+		}
+	}
+
+	public void generateSentiment(String trainFile, String testFile,
+			String outputTrain, String outputTest, String... featureFiles)
+			throws Exception {
 		List<String> sentiments = readFeature(featureFiles);
 
 		StringBuffer resultStr = new StringBuffer();
@@ -529,12 +830,16 @@ public class SentimentFeatureGenerator {
 		args[0] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/NYTimesBlogTrain.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/NYTimesBlogTest.csv";
 		args[2] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentiment/AFINN-111.txt";
+		args[3] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/prefixSymbolTrain.csv";
+		args[4] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/prefixSymbolTest.csv";
 		// args[3] =
 		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/specialTrain.csv";
 		// args[4] =
 		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/specialTest.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTrain.csv";
-		args[4] = "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTest.csv";
+		// args[3] =
+		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTrain.csv";
+		// args[4] =
+		// "/home/markpeng/Share/Kaggle/The Analytics Edge Competition/sentimentTest.csv";
 
 		if (args.length < 5) {
 			System.out
@@ -547,8 +852,11 @@ public class SentimentFeatureGenerator {
 		String outputTrain = args[3];
 		String outputTest = args[4];
 		SentimentFeatureGenerator worker = new SentimentFeatureGenerator();
-		worker.generate(trainFile, testFile, outputTrain, outputTest,
-				featureFiles);
+		worker.generatePrefixAndSymbol(trainFile, testFile, outputTrain,
+				outputTest);
+		// worker.generateSentiment(trainFile, testFile, outputTrain,
+		// outputTest,
+		// featureFiles);
 		// worker.prefixFeatureExtraction(trainFile, testFile);
 		// List<String> features = worker.readFeature(featureFiles);
 		// worker.sentimentFeatureExtraction(trainFile, testFile, features);
