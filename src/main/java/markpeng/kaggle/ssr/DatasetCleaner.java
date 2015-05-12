@@ -17,6 +17,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
@@ -25,8 +26,10 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.search.spell.JaroWinklerDistance;
 import org.apache.lucene.search.spell.PlainTextDictionary;
 import org.apache.lucene.search.spell.SpellChecker;
+import org.apache.lucene.search.spell.WordBreakSpellChecker;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
@@ -73,6 +76,11 @@ public class DatasetCleaner {
 						new FileOutputStream(
 								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_train.txt")),
 				true));
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_train.txt")),
+		// true));
 
 		StringBuffer resultStr = new StringBuffer();
 
@@ -176,6 +184,8 @@ public class DatasetCleaner {
 					// System.out.println();
 
 				}
+
+				// prefix match, middle match or suffix match
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
 					trainOut.write(resultStr.toString());
@@ -318,8 +328,9 @@ public class DatasetCleaner {
 			spellChecker = new SpellChecker(directory);
 			PlainTextDictionary dictionary = new PlainTextDictionary(new File(
 					dicPath));
+			Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_46);
 			IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_46,
-					null);
+					analyzer);
 			spellChecker.indexDictionary(dictionary, config, false);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -349,13 +360,37 @@ public class DatasetCleaner {
 		DatasetCleaner worker = new DatasetCleaner();
 		// worker.run(trainFile, testFile, outputTrain, outputTest);
 
-		String test = "refrigir";
+		String testQ = "refrigir";
+		String testP = "refriger";
+		// String testQ = "fridge";
+		// String testP = "Refrigerator";
 		String indexPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/spellCheckerIndex";
 		String dicPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/JOrtho/dictionary_en_2015_05/IncludedWords.txt";
 		SpellChecker checker = worker.loadDictionary(indexPath, dicPath);
-		String[] suggestions = checker.suggestSimilar(test, 5);
+		String[] suggestions = checker.suggestSimilar(testQ, 5);
+		checker.setAccuracy((float) 0.7);
+		// best measure =>
+		// http://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance
+		checker.setStringDistance(new JaroWinklerDistance());
+		// checker.setStringDistance(new NGramDistance(7));
+		// checker.setStringDistance(new LevensteinDistance());
+		System.out.println("Minimum accurarcy: " + checker.getAccuracy());
+		System.out.println(checker.getStringDistance().toString());
+		System.out.println(checker.getStringDistance()
+				.getDistance(testQ, testP));
+
 		if (suggestions.length > 0) {
-			System.out.println("Correction: " + Arrays.asList(suggestions));
+			System.out.println(testQ + " correction: "
+					+ Arrays.asList(suggestions));
 		}
+		suggestions = checker.suggestSimilar(testP, 5);
+		if (suggestions.length > 0) {
+			System.out.println(testP + " correction: "
+					+ Arrays.asList(suggestions));
+		}
+
+		// WordBreakSpellChecker breakChecker = new WordBreakSpellChecker();
+		// breakChecker.suggestWordBreaks(term, maxSuggestions, ir, suggestMode,
+		// sortMethod)
 	}
 }
