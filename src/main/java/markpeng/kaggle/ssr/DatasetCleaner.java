@@ -1,15 +1,18 @@
 package markpeng.kaggle.ssr;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
@@ -21,6 +24,11 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.search.spell.PlainTextDictionary;
+import org.apache.lucene.search.spell.SpellChecker;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -60,6 +68,12 @@ public class DatasetCleaner {
 
 	public void run(String trainFile, String testFile, String outputTrain,
 			String outputTest) throws Exception {
+		System.setOut(new PrintStream(
+				new BufferedOutputStream(
+						new FileOutputStream(
+								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_train.txt")),
+				true));
+
 		StringBuffer resultStr = new StringBuffer();
 
 		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
@@ -91,80 +105,94 @@ public class DatasetCleaner {
 			CsvParser trainParser = new CsvParser(settings);
 
 			// call beginParsing to read records one by one, iterator-style.
-			trainParser.beginParsing(new FileReader(trainFile));
+			trainParser.beginParsing(trainIn);
 
 			// for (String[] tokens : allRows) {
+			int matched = 0;
 			int count = 0;
 			String[] tokens;
 			while ((tokens = trainParser.parseNext()) != null) {
 				String id = tokens[0];
-				String query = tokens[1].replace("\"", "").trim();
-				String productTitle = tokens[2].replace("\"", "").trim();
-				String productDesc = tokens[3].replace("\"", "").trim();
+				String query = tokens[1].replace("\"", "").toLowerCase().trim();
+				String productTitle = tokens[2].replace("\"", "").toLowerCase()
+						.trim();
+				String productDesc = tokens[3].replace("\"", "").toLowerCase()
+						.trim();
 				double medianRelevance = Double.parseDouble(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
-				// String id = record.get("id");
-				// String query = record.get("query");
-				// String productTitle = record.get("product_title");
-				// String productDesc = record.get("product_description");
-				// double medianRelevance = Double.parseDouble(record
-				// .get("medianRelevance"));
-				// double relevance_variance = Double.parseDouble(record
-				// .get("relevance_variance"));
-
 				// preprocessing
-				String cleanQuery = getTextFromRawData(query);
-				String cleanProductTitle = getTextFromRawData(productTitle);
-				String cleanProductDesc = getTextFromRawData(productDesc);
+				String cleanQuery = processTextByLucene(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
 
-				System.out.println("[id=" + id + "]");
-				System.out.println("query:" + cleanQuery);
-				System.out.println("product_title:" + cleanProductTitle);
-				System.out.println("product_description:" + cleanProductDesc);
-				System.out.println("median_relevance:" + medianRelevance);
-				System.out.println("relevance_variance:" + relevance_variance);
-				System.out.println("\n\n\n\n");
-				// System.out.println();
+				Hashtable<String, Integer> qTokens = getTermFreqByLucene(cleanQuery);
+				Hashtable<String, Integer> titleTokens = getTermFreqByLucene(cleanProductTitle);
+				Hashtable<String, Integer> descTokens = getTermFreqByLucene(cleanProductDesc);
+
+				Hashtable<String, Integer> matchedTermsInTitle = new Hashtable<String, Integer>();
+				Hashtable<String, Integer> matchedTermsInDesc = new Hashtable<String, Integer>();
+				for (String q : qTokens.keySet()) {
+					if (titleTokens.containsKey(q)) {
+						matchedTermsInTitle.put(q, titleTokens.get(q));
+					}
+					if (descTokens.containsKey(q)) {
+						matchedTermsInDesc.put(q, descTokens.get(q));
+					}
+				}
+
+				if (matchedTermsInTitle.size() > 0
+						|| matchedTermsInDesc.size() > 0) {
+					// System.out.println("[id=" + id + "]");
+					// System.out.println("query:" + cleanQuery);
+					// System.out.println("product_title:" + cleanProductTitle);
+					// System.out.println("product_description:"
+					// + cleanProductDesc);
+					// System.out.println("median_relevance:" +
+					// medianRelevance);
+					// System.out.println("relevance_variance:"
+					// + relevance_variance);
+					// System.out.println("matched query terms in title:"
+					// + matchedTermsInTitle.toString());
+					// System.out.println("matched query terms in description:"
+					// + matchedTermsInDesc.toString());
+					// System.out.println("\n");
+					// System.out.println();
+
+					matched++;
+				} else {
+					System.out.println("[id=" + id + "]");
+					System.out.println("query:" + cleanQuery);
+					System.out.println("product_title:" + cleanProductTitle);
+					System.out.println("product_description:"
+							+ cleanProductDesc);
+					System.out.println("median_relevance:" + medianRelevance);
+					System.out.println("relevance_variance:"
+							+ relevance_variance);
+					System.out.println("matched query terms in title:"
+							+ matchedTermsInTitle.toString());
+					System.out.println("matched query terms in description:"
+							+ matchedTermsInDesc.toString());
+					System.out.println("\n");
+					// System.out.println();
+
+				}
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					trainOut.write(resultStr.toString());
+					trainOut.flush();
+					resultStr.setLength(0);
+				}
 
 				count++;
 			}
 
 			System.out.println("Total train records: " + count);
-
-			// String aLine = null;
-			// // skip header
-			// trainIn.readLine();
-			// while ((aLine = trainIn.readLine()) != null) {
-			// String tmp = aLine.toLowerCase().trim();
-			// String[] tokens = tmp.split(",^\\S+");
-			// String id = tokens[0];
-			// String query = tokens[1].replace("\"", "").trim();
-			// String productTitle = tokens[2].replace("\"", "").trim();
-			// String productDesc = tokens[3].replace("\"", "").trim();
-			// double medianRelevance = Double.parseDouble(tokens[4]);
-			// double relevance_variance = Double.parseDouble(tokens[5]);
-			//
-			// // preprocessing
-			// String cleanQuery = getTextFromRawData(query);
-			// String cleanProductTitle = getTextFromRawData(productTitle);
-			// String cleanProductDesc = getTextFromRawData(productDesc);
-			//
-			// System.out.println("[id=" + id + "]");
-			// System.out.println("query:" + cleanQuery);
-			// System.out.println("product_title:" + cleanProductTitle);
-			// System.out.println("product_description:" + cleanProductDesc);
-			// System.out.println("median_relevance:" + medianRelevance);
-			// System.out.println("relevance_variance:" + relevance_variance);
-			// System.out.println("\n\n\n\n");
-			// // System.out.println();
-			//
-			// if (resultStr.length() >= BUFFER_LENGTH) {
-			// trainOut.write(resultStr.toString());
-			// trainOut.flush();
-			// resultStr.setLength(0);
-			// }
-			//
-			// } // end of train file loop
+			System.out
+					.println("Total query-matched records in title or description: "
+							+ matched);
+			System.out
+					.println("Total not-matched records in title or description: "
+							+ (count - matched));
 
 		} finally {
 			trainIn.close();
@@ -188,6 +216,8 @@ public class DatasetCleaner {
 			testOut.close();
 			resultStr.setLength(0);
 		}
+
+		System.out.flush();
 	}
 
 	public String getTextFromRawData(String raw) {
@@ -197,7 +227,7 @@ public class DatasetCleaner {
 		Element body = doc.body();
 		String plainText = body.text().trim();
 		if (plainText.length() > 2) {
-			System.out.println(plainText);
+			// System.out.println(plainText);
 			result = plainText;
 		}
 
@@ -242,6 +272,62 @@ public class DatasetCleaner {
 		return result;
 	}
 
+	public String processTextByLucene(String text) throws IOException {
+		String result = text;
+
+		StringBuffer postText = new StringBuffer();
+		Set stopWords = new StandardAnalyzer(Version.LUCENE_46)
+				.getStopwordSet();
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
+		ts = new StopFilter(Version.LUCENE_46, ts, (CharArraySet) stopWords);
+		ts = new PorterStemFilter(ts);
+		try {
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+					postText.append(word + " ");
+
+					wordCount++;
+				}
+			}
+
+			String finalText = postText.toString().trim().replace("'", "");
+			if (finalText.length() > 1)
+				result = finalText;
+
+		} finally {
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
+		}
+
+		return result;
+	}
+
+	public SpellChecker loadDictionary(String indexPath, String dicPath) {
+		SpellChecker spellChecker = null;
+
+		try {
+			File dir = new File(indexPath);
+			Directory directory = FSDirectory.open(dir);
+			spellChecker = new SpellChecker(directory);
+			PlainTextDictionary dictionary = new PlainTextDictionary(new File(
+					dicPath));
+			IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_46,
+					null);
+			spellChecker.indexDictionary(dictionary, config, false);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		return spellChecker;
+	}
+
 	public static void main(String[] args) throws Exception {
 		args = new String[4];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
@@ -261,8 +347,15 @@ public class DatasetCleaner {
 		String outputTest = args[3];
 
 		DatasetCleaner worker = new DatasetCleaner();
-		worker.run(trainFile, testFile, outputTrain, outputTest);
+		// worker.run(trainFile, testFile, outputTrain, outputTest);
 
+		String test = "refrigir";
+		String indexPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/spellCheckerIndex";
+		String dicPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/JOrtho/dictionary_en_2015_05/IncludedWords.txt";
+		SpellChecker checker = worker.loadDictionary(indexPath, dicPath);
+		String[] suggestions = checker.suggestSimilar(test, 5);
+		if (suggestions.length > 0) {
+			System.out.println("Correction: " + Arrays.asList(suggestions));
+		}
 	}
-
 }

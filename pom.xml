@@ -106,5 +106,15 @@
 			<version>1.5.4</version>
 			<type>jar</type>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>4.6.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-suggest</artifactId>
+			<version>4.6.0</version>
+		</dependency>
 	</dependencies>
 </project>
