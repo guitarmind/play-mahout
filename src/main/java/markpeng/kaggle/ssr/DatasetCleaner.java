@@ -69,13 +69,156 @@ public class DatasetCleaner {
 		return features;
 	}
 
+	public void clean(String trainFile, String testFile, String outputTrain,
+			String outputTest) throws Exception {
+
+		StringBuffer resultStr = new StringBuffer();
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		BufferedReader testIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(testFile), "UTF-8"));
+
+		BufferedWriter trainOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputTrain, false), "UTF-8"));
+
+		BufferedWriter testOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputTest, false), "UTF-8"));
+
+		CsvParserSettings settings = new CsvParserSettings();
+		settings.setParseUnescapedQuotes(false);
+		settings.getFormat().setLineSeparator("\n");
+		settings.getFormat().setDelimiter(',');
+		settings.getFormat().setQuote('"');
+		settings.setHeaderExtractionEnabled(true);
+		settings.setEmptyValue("");
+		settings.setMaxCharsPerColumn(40960);
+
+		// -------------------------------------------------------------------------------------------
+		// Train Data
+
+		// create headers
+		resultStr
+				.append("\"id\",\"query\",\"product_title\",\"product_description\",\""
+						+ "median_relevance\",\"relevance_variance\"");
+		resultStr.append(newLine);
+
+		try {
+			// creates a CSV parser
+			CsvParser trainParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			trainParser.beginParsing(trainIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = trainParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").toLowerCase().trim();
+				String productTitle = tokens[2].replace("\"", "").toLowerCase()
+						.trim();
+				String productDesc = tokens[3].replace("\"", "").toLowerCase()
+						.trim();
+				int medianRelevance = Integer.parseInt(tokens[4]);
+				double relevance_variance = Double.parseDouble(tokens[5]);
+				// preprocessing
+				String cleanQuery = processTextByLucene(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+
+				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
+						+ cleanProductTitle + "\",\"" + cleanProductDesc
+						+ "\",\"" + medianRelevance + "\",\""
+						+ relevance_variance + "\"");
+				resultStr.append(newLine);
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					trainOut.write(resultStr.toString());
+					trainOut.flush();
+					resultStr.setLength(0);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total train records: " + count);
+
+		} finally {
+			trainIn.close();
+
+			trainOut.write(resultStr.toString());
+			trainOut.flush();
+			trainOut.close();
+			resultStr.setLength(0);
+		}
+
+		// -------------------------------------------------------------------------------------------
+		// Test Data
+
+		resultStr.setLength(0);
+		// create headers
+		resultStr
+				.append("\"id\",\"query\",\"product_title\",\"product_description\"");
+		resultStr.append(newLine);
+
+		try {
+			// creates a CSV parser
+			CsvParser testParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			testParser.beginParsing(testIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = testParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").toLowerCase().trim();
+				String productTitle = tokens[2].replace("\"", "").toLowerCase()
+						.trim();
+				String productDesc = tokens[3].replace("\"", "").toLowerCase()
+						.trim();
+				// preprocessing
+				String cleanQuery = processTextByLucene(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+
+				resultStr
+						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
+								+ cleanProductTitle + "\",\""
+								+ cleanProductDesc + "\"");
+				resultStr.append(newLine);
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					testOut.write(resultStr.toString());
+					testOut.flush();
+					resultStr.setLength(0);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total test records: " + count);
+
+		} finally {
+			testIn.close();
+
+			testOut.write(resultStr.toString());
+			testOut.flush();
+			testOut.close();
+			resultStr.setLength(0);
+		}
+
+		System.out.flush();
+	}
+
 	public void run(String trainFile, String testFile, String outputTrain,
 			String outputTest) throws Exception {
-		System.setOut(new PrintStream(
-				new BufferedOutputStream(
-						new FileOutputStream(
-								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_train.txt")),
-				true));
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_train.txt")),
+		// true));
 		// System.setOut(new PrintStream(
 		// new BufferedOutputStream(
 		// new FileOutputStream(
@@ -126,7 +269,7 @@ public class DatasetCleaner {
 						.trim();
 				String productDesc = tokens[3].replace("\"", "").toLowerCase()
 						.trim();
-				double medianRelevance = Double.parseDouble(tokens[4]);
+				int medianRelevance = Integer.parseInt(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
 				// preprocessing
 				String cleanQuery = processTextByLucene(getTextFromRawData(query));
@@ -291,7 +434,7 @@ public class DatasetCleaner {
 		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
 				new StringReader(text));
 		ts = new StopFilter(Version.LUCENE_46, ts, (CharArraySet) stopWords);
-		ts = new PorterStemFilter(ts);
+		// ts = new PorterStemFilter(ts);
 		try {
 			CharTermAttribute termAtt = ts
 					.addAttribute(CharTermAttribute.class);
@@ -358,36 +501,39 @@ public class DatasetCleaner {
 		String outputTest = args[3];
 
 		DatasetCleaner worker = new DatasetCleaner();
+		worker.clean(trainFile, testFile, outputTrain, outputTest);
 		// worker.run(trainFile, testFile, outputTrain, outputTest);
 
-		String testQ = "refrigir";
-		String testP = "refriger";
-		// String testQ = "fridge";
-		// String testP = "Refrigerator";
-		String indexPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/spellCheckerIndex";
-		String dicPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/JOrtho/dictionary_en_2015_05/IncludedWords.txt";
-		SpellChecker checker = worker.loadDictionary(indexPath, dicPath);
-		String[] suggestions = checker.suggestSimilar(testQ, 5);
-		checker.setAccuracy((float) 0.7);
-		// best measure =>
-		// http://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance
-		checker.setStringDistance(new JaroWinklerDistance());
-		// checker.setStringDistance(new NGramDistance(7));
-		// checker.setStringDistance(new LevensteinDistance());
-		System.out.println("Minimum accurarcy: " + checker.getAccuracy());
-		System.out.println(checker.getStringDistance().toString());
-		System.out.println(checker.getStringDistance()
-				.getDistance(testQ, testP));
-
-		if (suggestions.length > 0) {
-			System.out.println(testQ + " correction: "
-					+ Arrays.asList(suggestions));
-		}
-		suggestions = checker.suggestSimilar(testP, 5);
-		if (suggestions.length > 0) {
-			System.out.println(testP + " correction: "
-					+ Arrays.asList(suggestions));
-		}
+		// String testQ = "refrigir";
+		// String testP = "refriger";
+		// // String testQ = "fridge";
+		// // String testP = "Refrigerator";
+		// String indexPath =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/spellCheckerIndex";
+		// String dicPath =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/JOrtho/dictionary_en_2015_05/IncludedWords.txt";
+		// SpellChecker checker = worker.loadDictionary(indexPath, dicPath);
+		// String[] suggestions = checker.suggestSimilar(testQ, 5);
+		// checker.setAccuracy((float) 0.7);
+		// // best measure =>
+		// // http://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance
+		// checker.setStringDistance(new JaroWinklerDistance());
+		// // checker.setStringDistance(new NGramDistance(7));
+		// // checker.setStringDistance(new LevensteinDistance());
+		// System.out.println("Minimum accurarcy: " + checker.getAccuracy());
+		// System.out.println(checker.getStringDistance().toString());
+		// System.out.println(checker.getStringDistance()
+		// .getDistance(testQ, testP));
+		//
+		// if (suggestions.length > 0) {
+		// System.out.println(testQ + " correction: "
+		// + Arrays.asList(suggestions));
+		// }
+		// suggestions = checker.suggestSimilar(testP, 5);
+		// if (suggestions.length > 0) {
+		// System.out.println(testP + " correction: "
+		// + Arrays.asList(suggestions));
+		// }
 
 		// WordBreakSpellChecker breakChecker = new WordBreakSpellChecker();
 		// breakChecker.suggestWordBreaks(term, maxSuggestions, ir, suggestMode,
