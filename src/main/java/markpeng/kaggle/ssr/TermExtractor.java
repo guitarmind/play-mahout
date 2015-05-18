@@ -1,34 +1,27 @@
 package markpeng.kaggle.ssr;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopFilter;
+import org.apache.lucene.analysis.en.KStemFilter;
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.search.spell.PlainTextDictionary;
-import org.apache.lucene.search.spell.SpellChecker;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -45,25 +38,19 @@ public class TermExtractor {
 	public void extractTermsByQuey(String trainFile, String testFile,
 			String outputTrain, String outputTest) throws Exception {
 
-		System.setOut(new PrintStream(
-				new BufferedOutputStream(
-						new FileOutputStream(
-								"/home/markpeng/Share/Kaggle/Search Results Relevance/query_train_relevance4_title_20150517.txt")),
-				true));
+		List<String> detectedCompounds = new ArrayList<String>();
 
-		StringBuffer resultStr = new StringBuffer();
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/query_train_relevance4_title_20150517.txt")),
+		// true));
 
 		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
 				new FileInputStream(trainFile), "UTF-8"));
 
 		BufferedReader testIn = new BufferedReader(new InputStreamReader(
 				new FileInputStream(testFile), "UTF-8"));
-
-		BufferedWriter trainOut = new BufferedWriter(new OutputStreamWriter(
-				new FileOutputStream(outputTrain, false), "UTF-8"));
-
-		BufferedWriter testOut = new BufferedWriter(new OutputStreamWriter(
-				new FileOutputStream(outputTest, false), "UTF-8"));
 
 		CsvParserSettings settings = new CsvParserSettings();
 		settings.setParseUnescapedQuotes(false);
@@ -77,14 +64,7 @@ public class TermExtractor {
 		// -------------------------------------------------------------------------------------------
 		// Train Data
 
-		// create headers
-		// resultStr
-		// .append("\"id\",\"query\",\"product_title\",\"product_description\",\""
-		// + "median_relevance\",\"relevance_variance\"");
-		// resultStr.append(newLine);
-
 		try {
-			Hashtable<String, TreeSet<String>> queryTable = new Hashtable<String, TreeSet<String>>();
 
 			// creates a CSV parser
 			CsvParser trainParser = new CsvParser(settings);
@@ -106,68 +86,164 @@ public class TermExtractor {
 				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
 				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
 
-				Hashtable<String, Integer> qTokens = getTermFreqByLucene(cleanQuery);
-				Hashtable<String, Integer> titleTokens = getTermFreqByLucene(cleanProductTitle);
-				Hashtable<String, Integer> descTokens = getTermFreqByLucene(cleanProductDesc);
+				List<String> qTokens = getTermsAsListByLucene(cleanQuery);
+				List<String> titleTokens = getTermsAsListByLucene(cleanProductTitle);
+				List<String> descTokens = getTermsAsListByLucene(cleanProductDesc);
 
 				// fully matched
-				if (medianRelevance == 4) {
-					// System.out.println("[id=" + id + "]");
-					// System.out.println("query:" + cleanQuery);
-					// System.out.println("product_title:" + cleanProductTitle);
-					// System.out.println("product_description:"
-					// + cleanProductDesc);
-					// System.out.println("\n");
+				// if (medianRelevance >= 2) {
 
-					if (!queryTable.containsKey(query)) {
-						TreeSet<String> terms = new TreeSet<String>();
-						// terms.addAll(qTokens.keySet());
-						terms.addAll(titleTokens.keySet());
-						// terms.addAll(descTokens.keySet());
-
-						queryTable.put(query, terms);
-					} else {
-						TreeSet<String> terms = queryTable.get(query);
-						// terms.addAll(qTokens.keySet());
-						terms.addAll(titleTokens.keySet());
-						// terms.addAll(descTokens.keySet());
-
-						queryTable.put(query, terms);
+				// create compounds
+				List<String> compoundFromT = new ArrayList<String>();
+				for (int i = 0; i < titleTokens.size(); i++) {
+					if (i + 1 <= titleTokens.size() - 1) {
+						if (titleTokens.get(i).length() >= 3
+								&& titleTokens.get(i + 1).length() >= 3) {
+							String compound = titleTokens.get(i) + " "
+									+ titleTokens.get(i + 1);
+							if (!compoundFromT.contains(compound))
+								compoundFromT.add(compound);
+						}
 					}
-
+				}
+				for (String token : compoundFromT) {
+					String tmp = token.replace(" ", "");
+					for (String qt : qTokens) {
+						if (qt.length() > 3 && qt.length() >= tmp.length()
+								&& qt.contains(tmp)) {
+							// System.out.println(qt + "=>" + token
+							// + " (from Title)");
+							if (!detectedCompounds.contains(token))
+								detectedCompounds.add(token);
+						}
+					}
 				}
 
-				// completed not matched
-				// if (medianRelevance == 1) {
-				//
-				// }
-
-				// if (resultStr.length() >= BUFFER_LENGTH) {
-				// trainOut.write(resultStr.toString());
-				// trainOut.flush();
-				// resultStr.setLength(0);
-				// }
+				List<String> compoundFromD = new ArrayList<String>();
+				for (int i = 0; i < descTokens.size(); i++) {
+					if (i + 1 <= descTokens.size() - 1) {
+						if (descTokens.get(i).length() >= 3
+								&& descTokens.get(i + 1).length() >= 3) {
+							String compound = descTokens.get(i) + " "
+									+ descTokens.get(i + 1);
+							if (!compoundFromD.contains(compound))
+								compoundFromD.add(compound);
+						}
+					}
+				}
+				for (String token : compoundFromD) {
+					String tmp = token.replace(" ", "");
+					for (String qt : qTokens) {
+						if (qt.length() > 3 && qt.length() >= tmp.length()
+								&& qt.contains(tmp)) {
+							// System.out.println(qt + "=>" + token
+							// + " (from Desc)");
+							if (!detectedCompounds.contains(token))
+								detectedCompounds.add(token);
+						}
+					}
+				}
 
 				count++;
-			}
-
-			System.out.println("Total query terms: " + queryTable.size());
-			for (String q : queryTable.keySet()) {
-				System.out.println("[query =" + q + "]");
-				System.out.println("related terms:"
-						+ queryTable.get(q).toString());
 			}
 
 			System.out.println("Total train records: " + count);
 
 		} finally {
 			trainIn.close();
-
-			// trainOut.write(resultStr.toString());
-			// trainOut.flush();
-			// trainOut.close();
-			// resultStr.setLength(0);
 		}
+
+		// -------------------------------------------------------------------------------------------
+		// Test Data
+
+		try {
+
+			// creates a CSV parser
+			CsvParser testParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			testParser.beginParsing(testIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = testParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+
+				// preprocessing
+				String cleanQuery = processTextByLucene(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+
+				List<String> qTokens = getTermsAsListByLucene(cleanQuery);
+				List<String> titleTokens = getTermsAsListByLucene(cleanProductTitle);
+				List<String> descTokens = getTermsAsListByLucene(cleanProductDesc);
+
+				// create compounds
+				List<String> compoundFromT = new ArrayList<String>();
+				for (int i = 0; i < titleTokens.size(); i++) {
+					if (i + 1 <= titleTokens.size() - 1) {
+						if (titleTokens.get(i).length() >= 3
+								&& titleTokens.get(i + 1).length() >= 3) {
+							String compound = titleTokens.get(i) + " "
+									+ titleTokens.get(i + 1);
+							if (!compoundFromT.contains(compound))
+								compoundFromT.add(compound);
+						}
+					}
+				}
+				for (String token : compoundFromT) {
+					String tmp = token.replace(" ", "");
+					for (String qt : qTokens) {
+						if (qt.length() > 3 && qt.length() >= tmp.length()
+								&& qt.contains(tmp)) {
+							// System.out.println(qt + "=>" + token
+							// + " (from Title)");
+							if (!detectedCompounds.contains(token))
+								detectedCompounds.add(token);
+						}
+					}
+				}
+
+				List<String> compoundFromD = new ArrayList<String>();
+				for (int i = 0; i < descTokens.size(); i++) {
+					if (i + 1 <= descTokens.size() - 1) {
+						if (descTokens.get(i).length() >= 3
+								&& descTokens.get(i + 1).length() >= 3) {
+							String compound = descTokens.get(i) + " "
+									+ descTokens.get(i + 1);
+							if (!compoundFromD.contains(compound))
+								compoundFromD.add(compound);
+						}
+					}
+				}
+				for (String token : compoundFromD) {
+					String tmp = token.replace(" ", "");
+					for (String qt : qTokens) {
+						if (qt.length() > 3 && qt.length() >= tmp.length()
+								&& qt.contains(tmp)) {
+							// System.out.println(qt + "=>" + token
+							// + " (from Desc)");
+							if (!detectedCompounds.contains(token))
+								detectedCompounds.add(token);
+						}
+					}
+				}
+
+				count++;
+			}
+
+			System.out.println("Total test records: " + count);
+
+		} finally {
+			testIn.close();
+		}
+
+		System.out.println("\n\n[From Title ad Desc]");
+		for (String t : detectedCompounds)
+			System.out.println(t);
 
 		System.out.flush();
 	}
@@ -365,6 +441,42 @@ public class TermExtractor {
 		return result;
 	}
 
+	private List<String> getTermsAsListByLucene(String text) throws IOException {
+		List<String> result = new ArrayList<String>();
+
+		Set stopWords = new StandardAnalyzer(Version.LUCENE_46)
+				.getStopwordSet();
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
+		ts = new StopFilter(Version.LUCENE_46, ts, (CharArraySet) stopWords);
+		// ts = new PorterStemFilter(ts);
+		try {
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+
+					if (isAllEnglish(word)) {
+						if (!result.contains(word))
+							result.add(word);
+					}
+
+					wordCount++;
+				}
+			}
+
+		} finally {
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
+		}
+
+		return result;
+	}
+
 	public String processTextByLucene(String text) throws IOException {
 		String result = text;
 
@@ -384,6 +496,10 @@ public class TermExtractor {
 		// ts = new DictionaryCompoundWordTokenFilter(Version.LUCENE_46, ts,
 		// new CharArraySet(Version.LUCENE_46, dictionary, true), 6, 4,
 		// 10, false);
+
+		// less aggressove, better than PorterStemFilter!
+		ts = new KStemFilter(ts);
+
 		try {
 			CharTermAttribute termAtt = ts
 					.addAttribute(CharTermAttribute.class);
