@@ -18,6 +18,7 @@ import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.KStemFilter;
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -461,22 +462,22 @@ public class TermExtractor {
 		System.out.flush();
 	}
 
-	public void extractAllTerms(String trainFile, String testFile,
-			String outputTrain, String outputTest) throws Exception {
+	public void extractAllTermsInQuery(String trainFile, String testFile,
+			String outputFile) throws Exception {
 
-		StringBuffer resultStr = new StringBuffer();
+		List<String> queryTerms = new ArrayList<String>();
+
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/query_train_relevance4_title_20150517.txt")),
+		// true));
 
 		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
 				new FileInputStream(trainFile), "UTF-8"));
 
 		BufferedReader testIn = new BufferedReader(new InputStreamReader(
 				new FileInputStream(testFile), "UTF-8"));
-
-		BufferedWriter trainOut = new BufferedWriter(new OutputStreamWriter(
-				new FileOutputStream(outputTrain, false), "UTF-8"));
-
-		BufferedWriter testOut = new BufferedWriter(new OutputStreamWriter(
-				new FileOutputStream(outputTest, false), "UTF-8"));
 
 		CsvParserSettings settings = new CsvParserSettings();
 		settings.setParseUnescapedQuotes(false);
@@ -490,13 +491,8 @@ public class TermExtractor {
 		// -------------------------------------------------------------------------------------------
 		// Train Data
 
-		// create headers
-		resultStr
-				.append("\"id\",\"query\",\"product_title\",\"product_description\",\""
-						+ "median_relevance\",\"relevance_variance\"");
-		resultStr.append(newLine);
-
 		try {
+
 			// creates a CSV parser
 			CsvParser trainParser = new CsvParser(settings);
 
@@ -517,16 +513,10 @@ public class TermExtractor {
 				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
 				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
 
-				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
-						+ cleanProductTitle + "\",\"" + cleanProductDesc
-						+ "\",\"" + medianRelevance + "\",\""
-						+ relevance_variance + "\"");
-				resultStr.append(newLine);
-
-				if (resultStr.length() >= BUFFER_LENGTH) {
-					trainOut.write(resultStr.toString());
-					trainOut.flush();
-					resultStr.setLength(0);
+				List<String> qTokens = getTermsAsListByLucene(cleanQuery);
+				for (String q : qTokens) {
+					if (!queryTerms.contains(q))
+						queryTerms.add(q);
 				}
 
 				count++;
@@ -536,23 +526,13 @@ public class TermExtractor {
 
 		} finally {
 			trainIn.close();
-
-			trainOut.write(resultStr.toString());
-			trainOut.flush();
-			trainOut.close();
-			resultStr.setLength(0);
 		}
 
 		// -------------------------------------------------------------------------------------------
 		// Test Data
 
-		resultStr.setLength(0);
-		// create headers
-		resultStr
-				.append("\"id\",\"query\",\"product_title\",\"product_description\"");
-		resultStr.append(newLine);
-
 		try {
+
 			// creates a CSV parser
 			CsvParser testParser = new CsvParser(settings);
 
@@ -566,21 +546,16 @@ public class TermExtractor {
 				String query = tokens[1].replace("\"", "").trim();
 				String productTitle = tokens[2].replace("\"", "").trim();
 				String productDesc = tokens[3].replace("\"", "").trim();
+
 				// preprocessing
 				String cleanQuery = processTextByLucene(getTextFromRawData(query));
 				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
 				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
 
-				resultStr
-						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
-								+ cleanProductTitle + "\",\""
-								+ cleanProductDesc + "\"");
-				resultStr.append(newLine);
-
-				if (resultStr.length() >= BUFFER_LENGTH) {
-					testOut.write(resultStr.toString());
-					testOut.flush();
-					resultStr.setLength(0);
+				List<String> qTokens = getTermsAsListByLucene(cleanQuery);
+				for (String q : qTokens) {
+					if (!queryTerms.contains(q))
+						queryTerms.add(q);
 				}
 
 				count++;
@@ -590,12 +565,142 @@ public class TermExtractor {
 
 		} finally {
 			testIn.close();
-
-			testOut.write(resultStr.toString());
-			testOut.flush();
-			testOut.close();
-			resultStr.setLength(0);
 		}
+
+		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputFile, false), "UTF-8"));
+		System.out.println("\n\n[From Query]");
+		StringBuffer outputStr = new StringBuffer();
+		for (String t : queryTerms) {
+			System.out.println(t);
+			outputStr.append(t + newLine);
+		}
+		out.write(outputStr.toString());
+		out.flush();
+		out.close();
+
+		System.out.flush();
+	}
+
+	public void extractBigramWithDigitFromQuery(String trainFile,
+			String testFile, String outputTrain, String outputTest)
+			throws Exception {
+
+		List<String> detectedCompounds = new ArrayList<String>();
+
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/query_train_relevance4_title_20150517.txt")),
+		// true));
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		BufferedReader testIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(testFile), "UTF-8"));
+
+		CsvParserSettings settings = new CsvParserSettings();
+		settings.setParseUnescapedQuotes(false);
+		settings.getFormat().setLineSeparator("\n");
+		settings.getFormat().setDelimiter(',');
+		settings.getFormat().setQuote('"');
+		settings.setHeaderExtractionEnabled(true);
+		settings.setEmptyValue("");
+		settings.setMaxCharsPerColumn(40960);
+
+		// -------------------------------------------------------------------------------------------
+		// Train Data
+
+		try {
+
+			// creates a CSV parser
+			CsvParser trainParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			trainParser.beginParsing(trainIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = trainParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+				int medianRelevance = Integer.parseInt(tokens[4]);
+				double relevance_variance = Double.parseDouble(tokens[5]);
+				// preprocessing
+				String cleanQuery = processTextByLucene(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+
+				List<String> qTokens = getNgramTermsAsListByLucene(cleanQuery,
+						2);
+
+				// create compounds
+				for (String token : qTokens) {
+					if (cleanProductTitle.contains(token)
+							|| cleanProductDesc.contains(token))
+						if (!detectedCompounds.contains(token))
+							detectedCompounds.add(token);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total train records: " + count);
+
+		} finally {
+			trainIn.close();
+		}
+
+		// -------------------------------------------------------------------------------------------
+		// Test Data
+
+		try {
+
+			// creates a CSV parser
+			CsvParser testParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			testParser.beginParsing(testIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = testParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+
+				// preprocessing
+				String cleanQuery = processTextByLucene(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+
+				List<String> qTokens = getNgramTermsAsListByLucene(cleanQuery,
+						2);
+
+				// create compounds
+				for (String token : qTokens) {
+					if (cleanProductTitle.contains(token)
+							|| cleanProductDesc.contains(token))
+						if (!detectedCompounds.contains(token))
+							detectedCompounds.add(token);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total test records: " + count);
+
+		} finally {
+			testIn.close();
+		}
+
+		System.out.println("\n\n[From Title ad Desc]");
+		for (String t : detectedCompounds)
+			System.out.println(t);
 
 		System.out.flush();
 	}
@@ -633,7 +738,7 @@ public class TermExtractor {
 				if (termAtt.length() > 0) {
 					String word = termAtt.toString();
 
-					if (isAllEnglish(word) && word.length() > 3) {
+					if (isAllEnglish(word)) {
 						if (result.get(word) == null)
 							result.put(word, 1);
 						else {
@@ -675,6 +780,46 @@ public class TermExtractor {
 					if (isAllEnglish(word)) {
 						if (!result.contains(word))
 							result.add(word);
+					}
+
+					wordCount++;
+				}
+			}
+
+		} finally {
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
+		}
+
+		return result;
+	}
+
+	private List<String> getNgramTermsAsListByLucene(String text, int ngram)
+			throws IOException {
+		List<String> result = new ArrayList<String>();
+
+		Set stopWords = new StandardAnalyzer(Version.LUCENE_46)
+				.getStopwordSet();
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
+		ts = new StopFilter(Version.LUCENE_46, ts, (CharArraySet) stopWords);
+		// ts = new PorterStemFilter(ts);
+		ts = new ShingleFilter(ts, ngram, ngram);
+		try {
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+
+					if (word.split("\\s").length == ngram) {
+						if (isAllEnglishAndDigits(word)) {
+							if (!result.contains(word))
+								result.add(word);
+						}
 					}
 
 					wordCount++;
@@ -756,6 +901,39 @@ public class TermExtractor {
 		return result;
 	}
 
+	public boolean isAllDigits(String text) {
+		boolean result = true;
+
+		for (int i = 0; i < text.length(); i++) {
+			char c = text.charAt(i);
+			if (!Character.isDigit(c)) {
+				result = false;
+				break;
+			}
+		}
+
+		return result;
+	}
+
+	public boolean isAllEnglishAndDigits(String text) {
+		boolean result = true;
+
+		String[] tokens = text.split("\\s");
+
+		for (String token : tokens) {
+			for (int i = 0; i < token.length(); i++) {
+				char c = token.charAt(i);
+				if (!Character.isAlphabetic(c) && c != '-'
+						&& !Character.isDigit(c)) {
+					result = false;
+					break;
+				}
+			}
+		}
+
+		return result;
+	}
+
 	public static void main(String[] args) throws Exception {
 		args = new String[5];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
@@ -780,7 +958,13 @@ public class TermExtractor {
 		// worker.extractAllTerms(trainFile, testFile, outputTrain, outputTest);
 		// worker.extractCompoundFromQuery(trainFile, testFile, outputTrain,
 		// outputTest);
-		worker.extractCompoundFromTitleAndDescription(trainFile, testFile,
+		// worker.extractCompoundFromTitleAndDescription(trainFile, testFile,
+		// outputTrain, outputTest);
+		// String outputFile =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/distinct_query_terms_20150518.txt";
+		// worker.extractAllTermsInQuery(trainFile, testFile, outputFile);
+		worker.extractBigramWithDigitFromQuery(trainFile, testFile,
 				outputTrain, outputTest);
+
 	}
 }
