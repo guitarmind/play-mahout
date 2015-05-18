@@ -22,13 +22,14 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.KStemFilter;
-import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.search.spell.LevensteinDistance;
+import org.apache.lucene.search.spell.NGramDistance;
 import org.apache.lucene.search.spell.PlainTextDictionary;
 import org.apache.lucene.search.spell.SpellChecker;
 import org.apache.lucene.store.Directory;
@@ -45,6 +46,8 @@ public class DatasetCleaner {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
+
+	private static final double MIN_SIMILARITY = 0.75;
 
 	public List<String> readFile(String filePath) throws Exception {
 		List<String> result = new ArrayList<String>();
@@ -276,7 +279,14 @@ public class DatasetCleaner {
 	public void generate(String trainFile, String testFile, String outputTrain,
 			String outputTest, String compoundPath) throws Exception {
 
+		System.setOut(new PrintStream(
+				new BufferedOutputStream(
+						new FileOutputStream(
+								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_score4_20150518.txt")),
+				true));
+
 		List<String> compounds = readFile(compoundPath);
+		NGramDistance similarityTool = new NGramDistance(2);
 
 		StringBuffer resultStr = new StringBuffer();
 
@@ -303,6 +313,16 @@ public class DatasetCleaner {
 
 		// -------------------------------------------------------------------------------------------
 		// Train Data
+
+		int score4Count = 0;
+		int score3Count = 0;
+		int score2Count = 0;
+		int score1Count = 0;
+
+		int score4MatchedCount = 0;
+		int score3MatchedCount = 0;
+		int score2MatchedCount = 0;
+		int score1MatchedCount = 0;
 
 		// create headers
 		resultStr
@@ -366,7 +386,16 @@ public class DatasetCleaner {
 											+ titleTokens.get(q));
 
 						titleMatched++;
+					} else {
+						for (String t : titleTokens.keySet()) {
+							float sim = similarityTool.getDistance(q, t);
+							if (sim >= MIN_SIMILARITY) {
+								titleMatched++;
+								break;
+							}
+						}
 					}
+
 					if (descTokens.containsKey(q)) {
 						if (!matchedTermsInDesc.containsKey(query))
 							matchedTermsInDesc.put(query, descTokens.get(q));
@@ -377,6 +406,14 @@ public class DatasetCleaner {
 											+ descTokens.get(q));
 
 						descMatched++;
+					} else {
+						for (String d : descTokens.keySet()) {
+							float sim = similarityTool.getDistance(q, d);
+							if (sim >= MIN_SIMILARITY) {
+								descMatched++;
+								break;
+							}
+						}
 					}
 				}
 
@@ -385,6 +422,71 @@ public class DatasetCleaner {
 
 				// qInDesc
 				double qInDesc = (double) descMatched / qTokens.size();
+
+				// matching statistics
+				if (medianRelevance == 4) {
+					if (qInTitle == 1 || qInDesc == 1)
+						score4MatchedCount++;
+					else {
+						System.out.println("\n[id=" + id + "]");
+						System.out.println("query:" + cleanQuery);
+						System.out
+								.println("product_title:" + cleanProductTitle);
+						System.out.println("product_description:"
+								+ cleanProductDesc);
+						System.out.println("median_relevance:"
+								+ medianRelevance);
+						System.out.println("qInTitle:" + qInTitle);
+						System.out.println("qInDesc:" + qInDesc);
+					}
+
+					score4Count++;
+				} else if (medianRelevance == 3) {
+					if (qInTitle == 1 || qInDesc == 1)
+						score3MatchedCount++;
+					else {
+						// System.out.println("\n[id=" + id + "]");
+						// System.out.println("query:" + cleanQuery);
+						// System.out
+						// .println("product_title:" + cleanProductTitle);
+						// System.out.println("product_description:"
+						// + cleanProductDesc);
+						// System.out.println("median_relevance:"
+						// + medianRelevance);
+					}
+
+					score3Count++;
+				} else if (medianRelevance == 2) {
+					if (qInTitle == 1 || qInDesc == 1)
+						score2MatchedCount++;
+					else {
+						// System.out.println("\n[id=" + id + "]");
+						// System.out.println("query:" + cleanQuery);
+						// System.out
+						// .println("product_title:" + cleanProductTitle);
+						// System.out.println("product_description:"
+						// + cleanProductDesc);
+						// System.out.println("median_relevance:"
+						// + medianRelevance);
+					}
+
+					score2Count++;
+				} else if (medianRelevance == 1) {
+					if (qInTitle == 1 || qInDesc == 1)
+						score1MatchedCount++;
+					else {
+						// System.out.println("\n[id=" + id + "]");
+						// System.out.println("query:" + cleanQuery);
+						// System.out
+						// .println("product_title:" + cleanProductTitle);
+						// System.out.println("product_description:"
+						// + cleanProductDesc);
+						// System.out.println("median_relevance:"
+						// + medianRelevance);
+					}
+
+					score1Count++;
+				}
 
 				String[] qTmp = cleanQuery.split("\\s");
 
@@ -397,6 +499,7 @@ public class DatasetCleaner {
 				// TODO:
 				// prefix match in 1st token of title
 				// 2nd match in 2nd token of title
+				// matched distance with query tokens in title and desc
 
 				// secondMatch in title
 				int secondMatchInTitle = 0;
@@ -438,6 +541,15 @@ public class DatasetCleaner {
 			}
 
 			System.out.println("Total train records: " + count);
+
+			System.out.println("Full match rate for score 4: "
+					+ ((double) score4MatchedCount / score4Count) * 100);
+			System.out.println("Full match rate for score 3: "
+					+ ((double) score3MatchedCount / score3Count) * 100);
+			System.out.println("Full match rate for score 2: "
+					+ ((double) score2MatchedCount / score2Count) * 100);
+			System.out.println("Full match rate for score 1: "
+					+ ((double) score1MatchedCount / score1Count) * 100);
 
 		} finally {
 			trainIn.close();
@@ -1034,8 +1146,8 @@ public class DatasetCleaner {
 		args = new String[5];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_markpeng.csv";
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng.csv";
 		// args[3] =
@@ -1057,9 +1169,16 @@ public class DatasetCleaner {
 		String compoundPath = args[4];
 
 		DatasetCleaner worker = new DatasetCleaner();
-		// worker.generate(trainFile, testFile, outputTrain, outputTest);
-		worker.clean(trainFile, testFile, outputTrain, outputTest, compoundPath);
+		worker.generate(trainFile, testFile, outputTrain, outputTest,
+				compoundPath);
+		// worker.clean(trainFile, testFile, outputTrain, outputTest,
+		// compoundPath);
 		// worker.run(trainFile, testFile, outputTrain, outputTest);
+
+		// LevensteinDistance similarityTool = new LevensteinDistance();
+		NGramDistance similarityTool = new NGramDistance(2);
+		System.out.println(similarityTool.getDistance("bags", "bag"));
+		System.out.println(similarityTool.getDistance("duffle", "duffel"));
 
 		// String testQ = "refrigir";
 		// String testP = "refriger";
