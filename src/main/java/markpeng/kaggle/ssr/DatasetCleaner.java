@@ -499,7 +499,23 @@ public class DatasetCleaner {
 				// TODO:
 				// prefix match in 1st token of title
 				// 2nd match in 2nd token of title
+				// suffix match in last token of title
+				// query token match in 1st token of title
+				// query token match in 2nd token of title
+				// query token match in last token of title
 				// matched distance with query tokens in title and desc
+
+				// TODO:
+				// match in description
+
+				// TODO:
+				// compound match in prefix of title
+				// compound match in mid of title
+				// compound match in suffix of title
+
+				// TODO:
+				// fully matched or fully not matched flag in query token
+				// (either appearing in title or description)
 
 				// secondMatch in title
 				int secondMatchInTitle = 0;
