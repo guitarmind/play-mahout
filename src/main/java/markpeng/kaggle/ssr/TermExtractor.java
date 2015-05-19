@@ -42,7 +42,7 @@ public class TermExtractor {
 			String testFile, String outputTrain, String outputTest)
 			throws Exception {
 
-		List<String> detectedCompounds = new ArrayList<String>();
+		TreeSet<String> detectedCompounds = new TreeSet<String>();
 
 		// System.setOut(new PrintStream(
 		// new BufferedOutputStream(
@@ -95,56 +95,73 @@ public class TermExtractor {
 				List<String> titleTokens = getTermsAsListByLucene(cleanProductTitle);
 				List<String> descTokens = getTermsAsListByLucene(cleanProductDesc);
 
-				// fully matched
-				// if (medianRelevance >= 2) {
-
 				// create compounds
-				List<String> compoundFromT = new ArrayList<String>();
-				for (int i = 0; i < titleTokens.size(); i++) {
-					if (i + 1 <= titleTokens.size() - 1) {
-						if (titleTokens.get(i).length() >= 3
-								&& titleTokens.get(i + 1).length() >= 3) {
-							String compound = titleTokens.get(i) + " "
-									+ titleTokens.get(i + 1);
-							if (!compoundFromT.contains(compound))
-								compoundFromT.add(compound);
-						}
-					}
-				}
-				for (String token : compoundFromT) {
-					String tmp = token.replace(" ", "");
-					for (String qt : qTokens) {
-						if (qt.length() > 3 && qt.length() >= tmp.length()
-								&& qt.contains(tmp)) {
-							// System.out.println(qt + "=>" + token
-							// + " (from Title)");
-							if (!detectedCompounds.contains(token))
-								detectedCompounds.add(token);
+				for (String qt : qTokens) {
+					for (String token : titleTokens) {
+						if (qt.length() >= 3 && token.length() >= 3
+								&& qt.length() <= 10 && token.length() <= 10
+								&& qt.length() < token.length()) {
+							if (token.startsWith(qt) || token.endsWith(qt)) {
+								String compound = token;
+
+								boolean valid = false;
+								if (token.startsWith(qt)) {
+									String suffix = token.substring(token
+											.indexOf(qt) + qt.length());
+									if (suffix.length() >= 3) {
+										compound = qt + " " + suffix;
+										valid = true;
+									}
+								} else {
+									String prefix = token.substring(0,
+											token.indexOf(qt));
+
+									if (prefix.length() >= 3) {
+										compound = prefix + " " + qt;
+										valid = true;
+									}
+								}
+
+								if (valid
+										&& !detectedCompounds
+												.contains(compound))
+									detectedCompounds.add(compound);
+							}
 						}
 					}
 				}
 
-				List<String> compoundFromD = new ArrayList<String>();
-				for (int i = 0; i < descTokens.size(); i++) {
-					if (i + 1 <= descTokens.size() - 1) {
-						if (descTokens.get(i).length() >= 3
-								&& descTokens.get(i + 1).length() >= 3) {
-							String compound = descTokens.get(i) + " "
-									+ descTokens.get(i + 1);
-							if (!compoundFromD.contains(compound))
-								compoundFromD.add(compound);
-						}
-					}
-				}
-				for (String token : compoundFromD) {
-					String tmp = token.replace(" ", "");
-					for (String qt : qTokens) {
-						if (qt.length() > 3 && qt.length() >= tmp.length()
-								&& qt.contains(tmp)) {
-							// System.out.println(qt + "=>" + token
-							// + " (from Desc)");
-							if (!detectedCompounds.contains(token))
-								detectedCompounds.add(token);
+				for (String qt : qTokens) {
+					for (String token : descTokens) {
+						if (qt.length() >= 3 && token.length() >= 3
+								&& qt.length() <= 10 && token.length() <= 10
+								&& qt.length() < token.length()) {
+							if (token.startsWith(qt) || token.endsWith(qt)) {
+								String compound = token;
+
+								boolean valid = false;
+								if (token.startsWith(qt)) {
+									String suffix = token.substring(token
+											.indexOf(qt) + qt.length());
+									if (suffix.length() >= 3) {
+										compound = qt + " " + suffix;
+										valid = true;
+									}
+								} else {
+									String prefix = token.substring(0,
+											token.indexOf(qt));
+
+									if (prefix.length() >= 3) {
+										compound = prefix + " " + qt;
+										valid = true;
+									}
+								}
+
+								if (valid
+										&& !detectedCompounds
+												.contains(compound))
+									detectedCompounds.add(compound);
+							}
 						}
 					}
 				}
@@ -187,52 +204,72 @@ public class TermExtractor {
 				List<String> descTokens = getTermsAsListByLucene(cleanProductDesc);
 
 				// create compounds
-				List<String> compoundFromT = new ArrayList<String>();
-				for (int i = 0; i < titleTokens.size(); i++) {
-					if (i + 1 <= titleTokens.size() - 1) {
-						if (titleTokens.get(i).length() >= 3
-								&& titleTokens.get(i + 1).length() >= 3) {
-							String compound = titleTokens.get(i) + " "
-									+ titleTokens.get(i + 1);
-							if (!compoundFromT.contains(compound))
-								compoundFromT.add(compound);
-						}
-					}
-				}
-				for (String token : compoundFromT) {
-					String tmp = token.replace(" ", "");
-					for (String qt : qTokens) {
-						if (qt.length() > 3 && qt.length() >= tmp.length()
-								&& qt.contains(tmp)) {
-							// System.out.println(qt + "=>" + token
-							// + " (from Title)");
-							if (!detectedCompounds.contains(token))
-								detectedCompounds.add(token);
+				for (String qt : qTokens) {
+					for (String token : titleTokens) {
+						if (qt.length() >= 3 && token.length() >= 3
+								&& qt.length() <= 10 && token.length() <= 10
+								&& qt.length() < token.length()) {
+							if (token.startsWith(qt) || token.endsWith(qt)) {
+								String compound = token;
+
+								boolean valid = false;
+								if (token.startsWith(qt)) {
+									String suffix = token.substring(token
+											.indexOf(qt) + qt.length());
+									if (suffix.length() >= 3) {
+										compound = qt + " " + suffix;
+										valid = true;
+									}
+								} else {
+									String prefix = token.substring(0,
+											token.indexOf(qt));
+
+									if (prefix.length() >= 3) {
+										compound = prefix + " " + qt;
+										valid = true;
+									}
+								}
+
+								if (valid
+										&& !detectedCompounds
+												.contains(compound))
+									detectedCompounds.add(compound);
+							}
 						}
 					}
 				}
 
-				List<String> compoundFromD = new ArrayList<String>();
-				for (int i = 0; i < descTokens.size(); i++) {
-					if (i + 1 <= descTokens.size() - 1) {
-						if (descTokens.get(i).length() >= 3
-								&& descTokens.get(i + 1).length() >= 3) {
-							String compound = descTokens.get(i) + " "
-									+ descTokens.get(i + 1);
-							if (!compoundFromD.contains(compound))
-								compoundFromD.add(compound);
-						}
-					}
-				}
-				for (String token : compoundFromD) {
-					String tmp = token.replace(" ", "");
-					for (String qt : qTokens) {
-						if (qt.length() > 3 && qt.length() >= tmp.length()
-								&& qt.contains(tmp)) {
-							// System.out.println(qt + "=>" + token
-							// + " (from Desc)");
-							if (!detectedCompounds.contains(token))
-								detectedCompounds.add(token);
+				for (String qt : qTokens) {
+					for (String token : descTokens) {
+						if (qt.length() >= 3 && token.length() >= 3
+								&& qt.length() <= 10 && token.length() <= 10
+								&& qt.length() < token.length()) {
+							if (token.startsWith(qt) || token.endsWith(qt)) {
+								String compound = token;
+
+								boolean valid = false;
+								if (token.startsWith(qt)) {
+									String suffix = token.substring(token
+											.indexOf(qt) + qt.length());
+									if (suffix.length() >= 3) {
+										compound = qt + " " + suffix;
+										valid = true;
+									}
+								} else {
+									String prefix = token.substring(0,
+											token.indexOf(qt));
+
+									if (prefix.length() >= 3) {
+										compound = prefix + " " + qt;
+										valid = true;
+									}
+								}
+
+								if (valid
+										&& !detectedCompounds
+												.contains(compound))
+									detectedCompounds.add(compound);
+							}
 						}
 					}
 				}
@@ -246,7 +283,7 @@ public class TermExtractor {
 			testIn.close();
 		}
 
-		System.out.println("\n\n[From Title ad Desc]");
+		System.out.println("\n\n[From Title and Desc]");
 		for (String t : detectedCompounds)
 			System.out.println(t);
 
@@ -1362,8 +1399,10 @@ public class TermExtractor {
 		// worker.extractAllTermsInQuery(trainFile, testFile, outputFile);
 		// worker.extractBigramWithDigitFromQuery(trainFile, testFile,
 		// outputTrain, outputTest);
-		worker.extractBigramTopicCompoundFromTitleMappingInDescription(
-				trainFile, testFile, outputTrain, outputTest);
+		// worker.extractBigramTopicCompoundFromTitleMappingInDescription(
+		// trainFile, testFile, outputTrain, outputTest);
+		worker.extractSmallerWordsBaseOnQuery(trainFile, testFile, outputTrain,
+				outputTest);
 
 	}
 }
