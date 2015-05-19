@@ -58,7 +58,7 @@ public class DatasetCleaner {
 			String aLine = null;
 			while ((aLine = in.readLine()) != null) {
 				String tmp = aLine.toLowerCase().trim();
-				if (!result.contains(tmp))
+				if (tmp.length() > 0 && !result.contains(tmp))
 					result.add(tmp);
 			}
 		} finally {
@@ -277,7 +277,8 @@ public class DatasetCleaner {
 	}
 
 	public void generate(String trainFile, String testFile, String outputTrain,
-			String outputTest, String compoundPath) throws Exception {
+			String outputTest, String compoundPath, String smallWordPath)
+			throws Exception {
 
 		System.setOut(new PrintStream(
 				new BufferedOutputStream(
@@ -286,6 +287,8 @@ public class DatasetCleaner {
 				true));
 
 		List<String> compounds = readFile(compoundPath);
+		List<String> smallWords = readFile(smallWordPath);
+
 		NGramDistance similarityTool = new NGramDistance(2);
 
 		StringBuffer resultStr = new StringBuffer();
@@ -363,6 +366,16 @@ public class DatasetCleaner {
 						cleanProductTitle = cleanProductTitle.replace(tmp, c);
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, c);
+				}
+				// replace small words generated from title
+				for (String s : smallWords) {
+					String tmp = s.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, s);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, s);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, s);
 				}
 
 				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
@@ -616,6 +629,16 @@ public class DatasetCleaner {
 						cleanProductTitle = cleanProductTitle.replace(tmp, c);
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, c);
+				}
+				// replace small words generated from title
+				for (String s : smallWords) {
+					String tmp = s.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, s);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, s);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, s);
 				}
 
 				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
@@ -1159,7 +1182,7 @@ public class DatasetCleaner {
 	}
 
 	public static void main(String[] args) throws Exception {
-		args = new String[5];
+		args = new String[6];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
 		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv";
@@ -1171,10 +1194,11 @@ public class DatasetCleaner {
 		// args[4] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/JOrtho/dictionary_en_2015_05/IncludedWords.txt";
 		args[4] = "/home/markpeng/Share/Kaggle/Search Results Relevance/english-compound-words.txt";
+		args[5] = "/home/markpeng/Share/Kaggle/Search Results Relevance/small_words_in_title_20150519.txt";
 
 		if (args.length < 5) {
 			System.out
-					.println("Arguments: [train.csv] [test.csv] [output train] [output test] [compound path]");
+					.println("Arguments: [train.csv] [test.csv] [output train] [output test] [compound path] [smallword path]");
 			return;
 		}
 		String trainFile = args[0];
@@ -1183,18 +1207,19 @@ public class DatasetCleaner {
 		String outputTrain = args[2];
 		String outputTest = args[3];
 		String compoundPath = args[4];
+		String smallWordPath = args[5];
 
 		DatasetCleaner worker = new DatasetCleaner();
 		worker.generate(trainFile, testFile, outputTrain, outputTest,
-				compoundPath);
+				compoundPath, smallWordPath);
 		// worker.clean(trainFile, testFile, outputTrain, outputTest,
 		// compoundPath);
 		// worker.run(trainFile, testFile, outputTrain, outputTest);
 
 		// LevensteinDistance similarityTool = new LevensteinDistance();
-		NGramDistance similarityTool = new NGramDistance(2);
-		System.out.println(similarityTool.getDistance("bags", "bag"));
-		System.out.println(similarityTool.getDistance("duffle", "duffel"));
+		// NGramDistance similarityTool = new NGramDistance(2);
+		// System.out.println(similarityTool.getDistance("bags", "bag"));
+		// System.out.println(similarityTool.getDistance("duffle", "duffel"));
 
 		// String testQ = "refrigir";
 		// String testP = "refriger";
