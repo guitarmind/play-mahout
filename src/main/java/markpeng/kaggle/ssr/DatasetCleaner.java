@@ -111,6 +111,80 @@ public class DatasetCleaner {
 		return features;
 	}
 
+	public String replaceSynonyms(String text) {
+		String result = text;
+
+		if (text.contains("fridge"))
+			result = text.replace("fridge", "refrigerator");
+		if (text.contains("refrigirator"))
+			result = text.replace("refrigirator", "refrigerator");
+
+		if (text.contains("assassinss"))
+			result = text.replace("assassinss", "assassin");
+		if (text.contains("assassins"))
+			result = text.replace("assassins", "assassin");
+
+		if (text.contains("bedspreads"))
+			result = text.replace("bedspreads", "bed spread");
+		if (text.contains("bedspread"))
+			result = text.replace("bedspread", "bed spread");
+
+		if (text.contains("blue toot"))
+			result = text.replace("blue toot", "blue tooth");
+		if (text.contains("bluetooth"))
+			result = text.replace("bluetooth", "blue tooth");
+
+		if (text.contains("bike"))
+			result = text.replace("bike", "bicycle");
+
+		if (text.contains("photo"))
+			result = text.replace("photo", "picture");
+
+		if (text.contains("fragance"))
+			result = text.replace("fragance", "fragrance");
+
+		if (text.contains("beard trimmer"))
+			result = text.replace("beard trimmer", "shaver");
+
+		if (text.contains("evening gown"))
+			result = text.replace("evening gown", "prom dress");
+
+		if (text.contains("handbag"))
+			result = text.replace("handbag", "hand bag");
+
+		if (text.contains("hdtv"))
+			result = text.replace("hdtv", "hd tv");
+
+		if (text.contains("parfum"))
+			result = text.replace("parfum", "perfume");
+
+		if (text.contains("plus size"))
+			result = text.replace("plus size", "women clothes");
+
+		if (text.contains("tervi 11"))
+			result = text.replace("tervi 11", "reuse straw");
+
+		if (text.contains("micromink"))
+			result = text.replace("micromink", "blanket");
+
+		if (text.contains("gown"))
+			result = text.replace("gown", "dress");
+
+		if (text.contains("cushion"))
+			result = text.replace("cushion", "rug");
+
+		if (text.contains("mat"))
+			result = text.replace("mat", "rug");
+
+		if (text.contains("doormat"))
+			result = text.replace("doormat", "door mat");
+
+		// if (text.contains(""))
+		// result = text.replace("", "");
+
+		return result;
+	}
+
 	public void clean(String trainFile, String testFile, String outputTrain,
 			String outputTest, String compoundPath) throws Exception {
 
@@ -377,6 +451,10 @@ public class DatasetCleaner {
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, s);
 				}
+				// replace all synonyms
+				cleanQuery = replaceSynonyms(cleanQuery);
+				cleanProductTitle = replaceSynonyms(cleanProductTitle);
+				cleanProductDesc = replaceSynonyms(cleanProductDesc);
 
 				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
 						cleanQuery, true, true);
@@ -640,6 +718,10 @@ public class DatasetCleaner {
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, s);
 				}
+				// replace all synonyms
+				cleanQuery = replaceSynonyms(cleanQuery);
+				cleanProductTitle = replaceSynonyms(cleanProductTitle);
+				cleanProductDesc = replaceSynonyms(cleanProductDesc);
 
 				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
 						cleanQuery, true, true);
@@ -743,11 +825,12 @@ public class DatasetCleaner {
 	}
 
 	public void run(String trainFile, String testFile, String outputTrain,
-			String outputTest) throws Exception {
+			String outputTest, String compoundPath, String smallWordPath)
+			throws Exception {
 		System.setOut(new PrintStream(
 				new BufferedOutputStream(
 						new FileOutputStream(
-								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_all_20150514.txt")),
+								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_all_20150522.txt")),
 				true));
 		// System.setOut(new PrintStream(
 		// new BufferedOutputStream(
@@ -756,6 +839,11 @@ public class DatasetCleaner {
 		// true));
 
 		// Set<String> dictionary = readDictionary(dicPath);
+
+		List<String> compounds = readFile(compoundPath);
+		List<String> smallWords = readFile(smallWordPath);
+
+		NGramDistance similarityTool = new NGramDistance(2);
 
 		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
 				new FileInputStream(trainFile), "UTF-8"));
@@ -793,28 +881,106 @@ public class DatasetCleaner {
 				String productDesc = tokens[3].replace("\"", "").trim();
 				int medianRelevance = Integer.parseInt(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
+
 				// preprocessing
 				String cleanQuery = processTextByLucene(getTextFromRawData(query));
 				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
 				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
 
-				Hashtable<String, Integer> qTokens = getTermFreqByLucene(cleanQuery);
-				Hashtable<String, Integer> titleTokens = getTermFreqByLucene(cleanProductTitle);
-				Hashtable<String, Integer> descTokens = getTermFreqByLucene(cleanProductDesc);
+				// replace compounds
+				for (String c : compounds) {
+					String tmp = c.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, c);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, c);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, c);
+				}
+				// replace small words generated from title
+				for (String s : smallWords) {
+					String tmp = s.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, s);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, s);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, s);
+				}
+				// replace all synonyms
+				cleanQuery = replaceSynonyms(cleanQuery);
+				cleanProductTitle = replaceSynonyms(cleanProductTitle);
+				cleanProductDesc = replaceSynonyms(cleanProductDesc);
+
+				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
+						cleanQuery, true, true);
+				Hashtable<String, Integer> titleTokens = getTermFreqByLucene(
+						cleanProductTitle, true, true);
+				Hashtable<String, Integer> descTokens = getTermFreqByLucene(
+						cleanProductDesc, true, true);
 
 				Hashtable<String, Integer> matchedTermsInTitle = new Hashtable<String, Integer>();
 				Hashtable<String, Integer> matchedTermsInDesc = new Hashtable<String, Integer>();
+				int titleMatched = 0;
+				int descMatched = 0;
 				for (String q : qTokens.keySet()) {
 					if (titleTokens.containsKey(q)) {
-						matchedTermsInTitle.put(q, titleTokens.get(q));
+						if (!matchedTermsInTitle.containsKey(query))
+							matchedTermsInTitle.put(query, titleTokens.get(q));
+						else
+							matchedTermsInTitle.put(query,
+									matchedTermsInTitle.get(query)
+											+ titleTokens.get(q));
+
+						titleMatched++;
+					} else {
+						for (String t : titleTokens.keySet()) {
+							float sim = similarityTool.getDistance(q, t);
+							if (sim >= MIN_SIMILARITY) {
+								if (!matchedTermsInTitle.containsKey(t))
+									matchedTermsInTitle.put(t,
+											titleTokens.get(t));
+								else
+									matchedTermsInTitle.put(t,
+											matchedTermsInTitle.get(t)
+													+ titleTokens.get(t));
+
+								titleMatched++;
+								break;
+							}
+						}
 					}
+
 					if (descTokens.containsKey(q)) {
-						matchedTermsInDesc.put(q, descTokens.get(q));
+						if (!matchedTermsInDesc.containsKey(query))
+							matchedTermsInDesc.put(query, descTokens.get(q));
+						else
+							matchedTermsInDesc.put(
+									query,
+									matchedTermsInDesc.get(query)
+											+ descTokens.get(q));
+
+						descMatched++;
+					} else {
+						for (String d : descTokens.keySet()) {
+							float sim = similarityTool.getDistance(q, d);
+							if (sim >= MIN_SIMILARITY) {
+								if (!matchedTermsInDesc.containsKey(d))
+									matchedTermsInDesc
+											.put(d, descTokens.get(d));
+								else
+									matchedTermsInDesc.put(d,
+											matchedTermsInDesc.get(d)
+													+ descTokens.get(d));
+
+								descMatched++;
+								break;
+							}
+						}
 					}
 				}
 
-				if (matchedTermsInTitle.size() > 0
-						|| matchedTermsInDesc.size() > 0) {
+				if (titleMatched > 0 || descMatched > 0) {
 					// System.out.println("[id=" + id + "]");
 					// System.out.println("query:" + cleanQuery);
 					// System.out.println("product_title:" + cleanProductTitle);
@@ -833,20 +999,25 @@ public class DatasetCleaner {
 
 					matched++;
 				} else {
-					System.out.println("[id=" + id + "]");
-					System.out.println("query:" + cleanQuery);
-					System.out.println("product_title:" + cleanProductTitle);
-					System.out.println("product_description:"
-							+ cleanProductDesc);
-					System.out.println("median_relevance:" + medianRelevance);
-					System.out.println("relevance_variance:"
-							+ relevance_variance);
-					System.out.println("matched query terms in title:"
-							+ matchedTermsInTitle.toString());
-					System.out.println("matched query terms in description:"
-							+ matchedTermsInDesc.toString());
-					System.out.println("\n");
-					// System.out.println();
+					if (medianRelevance >= 3) {
+						System.out.println("[id=" + id + "]");
+						System.out.println("query:" + cleanQuery);
+						System.out
+								.println("product_title:" + cleanProductTitle);
+						System.out.println("product_description:"
+								+ cleanProductDesc);
+						System.out.println("median_relevance:"
+								+ medianRelevance);
+						System.out.println("relevance_variance:"
+								+ relevance_variance);
+						System.out.println("matched query terms in title:"
+								+ matchedTermsInTitle.toString());
+						System.out
+								.println("matched query terms in description:"
+										+ matchedTermsInDesc.toString());
+						System.out.println("\n");
+						// System.out.println();
+					}
 
 				}
 
@@ -887,28 +1058,106 @@ public class DatasetCleaner {
 				String query = tokens[1].replace("\"", "").trim();
 				String productTitle = tokens[2].replace("\"", "").trim();
 				String productDesc = tokens[3].replace("\"", "").trim();
+
 				// preprocessing
 				String cleanQuery = processTextByLucene(getTextFromRawData(query));
 				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
 				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
 
-				Hashtable<String, Integer> qTokens = getTermFreqByLucene(cleanQuery);
-				Hashtable<String, Integer> titleTokens = getTermFreqByLucene(cleanProductTitle);
-				Hashtable<String, Integer> descTokens = getTermFreqByLucene(cleanProductDesc);
+				// replace compounds
+				for (String c : compounds) {
+					String tmp = c.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, c);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, c);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, c);
+				}
+				// replace small words generated from title
+				for (String s : smallWords) {
+					String tmp = s.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, s);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, s);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, s);
+				}
+				// replace all synonyms
+				cleanQuery = replaceSynonyms(cleanQuery);
+				cleanProductTitle = replaceSynonyms(cleanProductTitle);
+				cleanProductDesc = replaceSynonyms(cleanProductDesc);
+
+				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
+						cleanQuery, true, true);
+				Hashtable<String, Integer> titleTokens = getTermFreqByLucene(
+						cleanProductTitle, true, true);
+				Hashtable<String, Integer> descTokens = getTermFreqByLucene(
+						cleanProductDesc, true, true);
 
 				Hashtable<String, Integer> matchedTermsInTitle = new Hashtable<String, Integer>();
 				Hashtable<String, Integer> matchedTermsInDesc = new Hashtable<String, Integer>();
+				int titleMatched = 0;
+				int descMatched = 0;
 				for (String q : qTokens.keySet()) {
 					if (titleTokens.containsKey(q)) {
-						matchedTermsInTitle.put(q, titleTokens.get(q));
+						if (!matchedTermsInTitle.containsKey(query))
+							matchedTermsInTitle.put(query, titleTokens.get(q));
+						else
+							matchedTermsInTitle.put(query,
+									matchedTermsInTitle.get(query)
+											+ titleTokens.get(q));
+
+						titleMatched++;
+					} else {
+						for (String t : titleTokens.keySet()) {
+							float sim = similarityTool.getDistance(q, t);
+							if (sim >= MIN_SIMILARITY) {
+								if (!matchedTermsInTitle.containsKey(t))
+									matchedTermsInTitle.put(t,
+											titleTokens.get(t));
+								else
+									matchedTermsInTitle.put(t,
+											matchedTermsInTitle.get(t)
+													+ titleTokens.get(t));
+
+								titleMatched++;
+								break;
+							}
+						}
 					}
+
 					if (descTokens.containsKey(q)) {
-						matchedTermsInDesc.put(q, descTokens.get(q));
+						if (!matchedTermsInDesc.containsKey(query))
+							matchedTermsInDesc.put(query, descTokens.get(q));
+						else
+							matchedTermsInDesc.put(
+									query,
+									matchedTermsInDesc.get(query)
+											+ descTokens.get(q));
+
+						descMatched++;
+					} else {
+						for (String d : descTokens.keySet()) {
+							float sim = similarityTool.getDistance(q, d);
+							if (sim >= MIN_SIMILARITY) {
+								if (!matchedTermsInDesc.containsKey(d))
+									matchedTermsInDesc
+											.put(d, descTokens.get(d));
+								else
+									matchedTermsInDesc.put(d,
+											matchedTermsInDesc.get(d)
+													+ descTokens.get(d));
+
+								descMatched++;
+								break;
+							}
+						}
 					}
 				}
 
-				if (matchedTermsInTitle.size() > 0
-						|| matchedTermsInDesc.size() > 0) {
+				if (titleMatched > 0 || descMatched > 0) {
 					// System.out.println("[id=" + id + "]");
 					// System.out.println("query:" + cleanQuery);
 					// System.out.println("product_title:" + cleanProductTitle);
@@ -1214,7 +1463,9 @@ public class DatasetCleaner {
 				compoundPath, smallWordPath);
 		// worker.clean(trainFile, testFile, outputTrain, outputTest,
 		// compoundPath);
-		// worker.run(trainFile, testFile, outputTrain, outputTest);
+		// worker.run(trainFile, testFile, outputTrain, outputTest,
+		// compoundPath,
+		// smallWordPath);
 
 		// LevensteinDistance similarityTool = new LevensteinDistance();
 		// NGramDistance similarityTool = new NGramDistance(2);
