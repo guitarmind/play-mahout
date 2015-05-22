@@ -112,75 +112,75 @@ public class DatasetCleaner {
 	}
 
 	public String replaceSynonyms(String text) {
-		String result = text;
+		String result = text.toLowerCase();
 
-		if (text.contains("fridge"))
-			result = text.replace("fridge", "refrigerator");
-		if (text.contains("refrigirator"))
-			result = text.replace("refrigirator", "refrigerator");
+		if (result.contains("fridge"))
+			result = result.replace("fridge", "refrigerator");
+		if (result.contains("refrigirator"))
+			result = result.replace("refrigirator", "refrigerator");
 
-		if (text.contains("assassinss"))
-			result = text.replace("assassinss", "assassin");
-		if (text.contains("assassins"))
-			result = text.replace("assassins", "assassin");
+		if (result.contains("assassinss"))
+			result = result.replace("assassinss", "assassin");
+		if (result.contains("assassins"))
+			result = result.replace("assassins", "assassin");
 
-		if (text.contains("bedspreads"))
-			result = text.replace("bedspreads", "bed spread");
-		if (text.contains("bedspread"))
-			result = text.replace("bedspread", "bed spread");
+		if (result.contains("bedspreads"))
+			result = result.replace("bedspreads", "bed spread");
+		if (result.contains("bedspread"))
+			result = result.replace("bedspread", "bed spread");
 
-		if (text.contains("blue toot"))
-			result = text.replace("blue toot", "blue tooth");
-		if (text.contains("bluetooth"))
-			result = text.replace("bluetooth", "blue tooth");
+		if (result.contains("blue toot"))
+			result = result.replace("blue toot", "blue tooth");
+		if (result.contains("bluetooth"))
+			result = result.replace("bluetooth", "blue tooth");
 
-		if (text.contains("bike"))
-			result = text.replace("bike", "bicycle");
+		if (result.contains("bike"))
+			result = result.replace("bike", "bicycle");
 
-		if (text.contains("photo"))
-			result = text.replace("photo", "picture");
+		if (result.contains("photo"))
+			result = result.replace("photo", "picture");
 
-		if (text.contains("fragance"))
-			result = text.replace("fragance", "fragrance");
+		if (result.contains("fragance"))
+			result = result.replace("fragance", "fragrance");
 
-		if (text.contains("beard trimmer"))
-			result = text.replace("beard trimmer", "shaver");
+		if (result.contains("beard trimmer"))
+			result = result.replace("beard trimmer", "shaver");
 
-		if (text.contains("evening gown"))
-			result = text.replace("evening gown", "prom dress");
+		if (result.contains("evening gown"))
+			result = result.replace("evening gown", "prom dress");
 
-		if (text.contains("handbag"))
-			result = text.replace("handbag", "hand bag");
+		if (result.contains("handbag"))
+			result = result.replace("handbag", "hand bag");
 
-		if (text.contains("hdtv"))
-			result = text.replace("hdtv", "hd tv");
+		if (result.contains("hdtv"))
+			result = result.replace("hdtv", "hd tv");
 
-		if (text.contains("parfum"))
-			result = text.replace("parfum", "perfume");
+		if (result.contains("parfum"))
+			result = result.replace("parfum", "perfume");
 
-		if (text.contains("plus size"))
-			result = text.replace("plus size", "women clothes");
+		if (result.contains("plus size"))
+			result = result.replace("plus size", "women clothes");
 
-		if (text.contains("tervi 11"))
-			result = text.replace("tervi 11", "reuse straw");
+		if (result.contains("tervi 11"))
+			result = result.replace("tervi 11", "reuse straw");
 
-		if (text.contains("micromink"))
-			result = text.replace("micromink", "blanket");
+		if (result.contains("micromink"))
+			result = result.replace("micromink", "blanket");
 
-		if (text.contains("gown"))
-			result = text.replace("gown", "dress");
+		if (result.contains("gown"))
+			result = result.replace("gown", "dress");
 
-		if (text.contains("cushion"))
-			result = text.replace("cushion", "rug");
+		if (result.contains("cushion"))
+			result = result.replace("cushion", "rug");
 
-		if (text.contains("mat"))
-			result = text.replace("mat", "rug");
+		if (result.contains("mat"))
+			result = result.replace("mat", "rug");
 
-		if (text.contains("doormat"))
-			result = text.replace("doormat", "door mat");
+		if (result.contains("doormat"))
+			result = result.replace("doormat", "door mat");
 
-		// if (text.contains(""))
-		// result = text.replace("", "");
+		// if (result.contains(""))
+		// result = result.replace("", "");
 
 		return result;
 	}
@@ -425,6 +425,9 @@ public class DatasetCleaner {
 				String productDesc = tokens[3].replace("\"", "").trim();
 				int medianRelevance = Integer.parseInt(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
+
+				// if (id.equals("204"))
+				// System.out.println();
 
 				// preprocessing
 				String cleanQuery = processTextByLucene(getTextFromRawData(query));
