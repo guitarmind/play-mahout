@@ -117,7 +117,7 @@ public class WrongCaseViewer {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[1];
-		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_rf_1560features_mtry=140_nodesize=1_ntree=500_20150523.csv";
+		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_rf_1563features_mtry=40_nodesize=1_ntree=500_20150523.csv";
 
 		WrongCaseViewer worker = new WrongCaseViewer();
 		worker.view(args[0]);
