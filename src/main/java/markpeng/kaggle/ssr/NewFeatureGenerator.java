@@ -233,22 +233,17 @@ public class NewFeatureGenerator {
 		// -------------------------------------------------------------------------------------------
 		// Train Data
 
-		int score4Count = 0;
-		int score3Count = 0;
-		int score2Count = 0;
-		int score1Count = 0;
-
-		int score4MatchedCount = 0;
-		int score3MatchedCount = 0;
-		int score2MatchedCount = 0;
-		int score1MatchedCount = 0;
-
 		// create headers
 		resultStr
 				.append("\"id\",\"query\",\"product_title\",\"product_description\",\""
 						+ "median_relevance\",\"relevance_variance\",\""
 						+ "qInTitle\",\"qInDesc\",\""
-						+ "prefixMatchInTitle\",\"secondMatchInTitle\",\"midMatchInTitle\",\"suffixMatchInTitle\"");
+						+ "prefixMatchInTitle\",\"secondMatchInTitle\",\"midMatchInTitle\",\"suffixMatchInTitle\",\""
+						+ "qSize\",\"titleSize\",\"descSize\",\"titleRatio\",\"descRatio\",\""
+						+ "prefixMatchIn1stTokenOfTitle\",\"secondMatchIn2ndTokenOfTitle\",\"suffixMatchInLastTokenOfTitle\",\""
+						+ "matchIn1stTokenOfTitle\",\"matchIn2ndTokenOfTitle\",\"matchInLastTokenOfTitle\",\""
+						+ "compoundMatchInTitlePrefix\",\"compoundMatchInTitleSuffix\",\""
+						+ "fullyMatchedInQ\",\"fullyNotMatchedInQ\"");
 		resultStr.append(newLine);
 
 		try {
@@ -470,13 +465,28 @@ public class NewFeatureGenerator {
 				// TODO:
 				// matched distance with query tokens in title and desc
 
-				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
-						+ cleanProductTitle + "\",\"" + cleanProductDesc
-						+ "\",\"" + medianRelevance + "\",\""
-						+ relevance_variance + "\",\"" + qInTitle + "\",\""
-						+ qInDesc + "\",\"" + prefixMatchInTitle + "\",\""
-						+ secondMatchInTitle + "\",\"" + midMatchInTitle
-						+ "\",\"" + suffixMatchInTitle + "\"");
+				resultStr
+						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
+								+ cleanProductTitle + "\",\""
+								+ cleanProductDesc + "\",\"" + medianRelevance
+								+ "\",\"" + relevance_variance + "\",\""
+								+ qInTitle + "\",\"" + qInDesc + "\",\""
+								+ prefixMatchInTitle + "\",\""
+								+ secondMatchInTitle + "\",\""
+								+ midMatchInTitle + "\",\""
+								+ suffixMatchInTitle + "\",\"" + qSize
+								+ "\",\"" + titleSize + "\",\"" + descSize
+								+ "\",\"" + titleRatio + "\",\"" + descRatio
+								+ "\",\"" + prefixMatchIn1stTokenOfTitle
+								+ "\",\"" + secondMatchIn2ndTokenOfTitle
+								+ "\",\"" + suffixMatchInLastTokenOfTitle
+								+ "\",\"" + matchIn1stTokenOfTitle + "\",\""
+								+ matchIn2ndTokenOfTitle + "\",\""
+								+ matchInLastTokenOfTitle + "\",\""
+								+ compoundMatchInTitlePrefix + "\",\""
+								+ compoundMatchInTitleSuffix + "\",\""
+								+ fullyMatchedInQ + "\",\""
+								+ fullyNotMatchedInQ + "\"");
 				resultStr.append(newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
@@ -489,16 +499,6 @@ public class NewFeatureGenerator {
 			}
 
 			System.out.println("Total train records: " + count);
-
-			System.out.println("Full match rate for score 4: "
-					+ ((double) score4MatchedCount / score4Count) * 100);
-			System.out.println("Full match rate for score 3: "
-					+ ((double) score3MatchedCount / score3Count) * 100);
-			System.out.println("Full match rate for score 2: "
-					+ ((double) score2MatchedCount / score2Count) * 100);
-			System.out.println("Full match rate for score 1: "
-					+ ((double) score1MatchedCount / score1Count) * 100);
-
 		} finally {
 			trainIn.close();
 
@@ -516,7 +516,12 @@ public class NewFeatureGenerator {
 		resultStr
 				.append("\"id\",\"query\",\"product_title\",\"product_description\",\""
 						+ "qInTitle\",\"qInDesc\",\""
-						+ "prefixMatchInTitle\",\"secondMatchInTitle\",\"midMatchInTitle\",\"suffixMatchInTitle\"");
+						+ "prefixMatchInTitle\",\"secondMatchInTitle\",\"midMatchInTitle\",\"suffixMatchInTitle\",\""
+						+ "qSize\",\"titleSize\",\"descSize\",\"titleRatio\",\"descRatio\",\""
+						+ "prefixMatchIn1stTokenOfTitle\",\"secondMatchIn2ndTokenOfTitle\",\"suffixMatchInLastTokenOfTitle\",\""
+						+ "matchIn1stTokenOfTitle\",\"matchIn2ndTokenOfTitle\",\"matchInLastTokenOfTitle\",\""
+						+ "compoundMatchInTitlePrefix\",\"compoundMatchInTitleSuffix\",\""
+						+ "fullyMatchedInQ\",\"fullyNotMatchedInQ\"");
 		resultStr.append(newLine);
 
 		try {
@@ -599,20 +604,23 @@ public class NewFeatureGenerator {
 					}
 				}
 
+				// ----------------------------------------------------------------------------------------------------------------------------------------
+				// Features
+
 				// qInTitle
 				double qInTitle = (double) titleMatched / qTokens.size();
-
 				// qInDesc
 				double qInDesc = (double) descMatched / qTokens.size();
 
 				String[] qTmp = cleanQuery.split("\\s");
+				String prefixQ = qTmp[0];
+				String suffixQ = qTmp[qTmp.length - 1];
+				String[] tTmp = cleanProductTitle.split("\\s");
 
 				// prefixMatch in title
 				int prefixMatchInTitle = 0;
-				String prefixQ = qTmp[0];
 				if (titleTokens.containsKey(prefixQ))
 					prefixMatchInTitle = 1;
-
 				// secondMatch in title
 				int secondMatchInTitle = 0;
 				if (qTmp.length >= 2) {
@@ -620,26 +628,123 @@ public class NewFeatureGenerator {
 					if (titleTokens.containsKey(secondQ))
 						secondMatchInTitle = 1;
 				}
-
 				// midMatch in title
 				int midMatchInTitle = 0;
 				for (int i = 1; i < qTmp.length - 1; i++) {
 					if (titleTokens.containsKey(qTmp[i]))
 						midMatchInTitle = 1;
 				}
-
 				// suffixMatch in title
 				int suffixMatchInTitle = 0;
-				String suffixQ = qTmp[qTmp.length - 1];
 				if (titleTokens.containsKey(suffixQ))
 					suffixMatchInTitle = 1;
 
-				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
-						+ cleanProductTitle + "\",\"" + cleanProductDesc
-						+ "\",\"" + qInTitle + "\",\"" + qInDesc + "\",\""
-						+ prefixMatchInTitle + "\",\"" + secondMatchInTitle
-						+ "\",\"" + midMatchInTitle + "\",\""
-						+ suffixMatchInTitle + "\"");
+				// qSize
+				int qSize = qTokens.size();
+				// titleSize
+				int titleSize = titleTokens.size();
+				// descSize
+				int descSize = descTokens.size();
+
+				// titleRatio
+				double titleRatio = (double) titleMatched / titleTokens.size();
+				// descRatio
+				double descRatio = (double) descMatched / descTokens.size();
+
+				// prefix match in 1st token of title
+				int prefixMatchIn1stTokenOfTitle = 0;
+				if (prefixQ.equals(tTmp[0]))
+					prefixMatchIn1stTokenOfTitle = 1;
+				// 2nd match in 2nd token of title
+				int secondMatchIn2ndTokenOfTitle = 0;
+				if (qTmp.length >= 2 && tTmp.length >= 2) {
+					String secondQ = qTmp[1];
+					if (secondQ.equals(tTmp[1]))
+						secondMatchIn2ndTokenOfTitle = 1;
+				}
+				// suffix match in last token of title
+				int suffixMatchInLastTokenOfTitle = 0;
+				if (suffixQ.equals(tTmp[tTmp.length - 1]))
+					suffixMatchInLastTokenOfTitle = 1;
+
+				// query token match in 1st token of title
+				int matchIn1stTokenOfTitle = 0;
+				if (cleanQuery.contains(tTmp[0]))
+					matchIn1stTokenOfTitle = 1;
+				// query token match in 2nd token of title
+				int matchIn2ndTokenOfTitle = 0;
+				if (tTmp.length >= 2) {
+					if (cleanQuery.contains(tTmp[1]))
+						matchIn2ndTokenOfTitle = 1;
+				}
+				// query token match in last token of title
+				int matchInLastTokenOfTitle = 0;
+				if (cleanQuery.contains(tTmp[tTmp.length - 1]))
+					matchInLastTokenOfTitle = 1;
+
+				// compound match in prefix of title
+				int compoundMatchInTitlePrefix = 0;
+				if (qTmp.length >= 2 && tTmp.length >= 2) {
+					String compoundT = tTmp[0] + " " + tTmp[1];
+					for (int i = 0; i < qTmp.length; i++) {
+						if (i + 1 < qTmp.length) {
+							String compoundQ = qTmp[i] + " " + qTmp[i + 1];
+							if (compoundQ.equals(compoundT))
+								compoundMatchInTitlePrefix = 1;
+						}
+					}
+				}
+				// compound match in suffix of title
+				int compoundMatchInTitleSuffix = 0;
+				if (qTmp.length >= 2 && tTmp.length >= 2) {
+					String compoundT = tTmp[tTmp.length - 2] + " "
+							+ tTmp[tTmp.length - 1];
+					for (int i = 0; i < qTmp.length; i++) {
+						if (i + 1 < qTmp.length) {
+							String compoundQ = qTmp[i] + " " + qTmp[i + 1];
+							if (compoundQ.equals(compoundT))
+								compoundMatchInTitleSuffix = 1;
+						}
+					}
+				}
+
+				// fully matched or fully not matched flag in query token
+				// (either appearing in title or description)
+				int fullyMatchedInQ = 0;
+				if ((titleMatched + descMatched) >= qTokens.size())
+					fullyMatchedInQ = 1;
+				int fullyNotMatchedInQ = 0;
+				if ((titleMatched + descMatched) == 0)
+					fullyNotMatchedInQ = 1;
+
+				// TODO:
+				// query bigram topic words match in title
+				// title bigram topic words match in desc (DF=3)
+
+				// TODO:
+				// matched distance with query tokens in title and desc
+
+				resultStr
+						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
+								+ cleanProductTitle + "\",\""
+								+ cleanProductDesc + "\",\"" + qInTitle
+								+ "\",\"" + qInDesc + "\",\""
+								+ prefixMatchInTitle + "\",\""
+								+ secondMatchInTitle + "\",\""
+								+ midMatchInTitle + "\",\""
+								+ suffixMatchInTitle + "\",\"" + qSize
+								+ "\",\"" + titleSize + "\",\"" + descSize
+								+ "\",\"" + titleRatio + "\",\"" + descRatio
+								+ "\",\"" + prefixMatchIn1stTokenOfTitle
+								+ "\",\"" + secondMatchIn2ndTokenOfTitle
+								+ "\",\"" + suffixMatchInLastTokenOfTitle
+								+ "\",\"" + matchIn1stTokenOfTitle + "\",\""
+								+ matchIn2ndTokenOfTitle + "\",\""
+								+ matchInLastTokenOfTitle + "\",\""
+								+ compoundMatchInTitlePrefix + "\",\""
+								+ compoundMatchInTitleSuffix + "\",\""
+								+ fullyMatchedInQ + "\",\""
+								+ fullyNotMatchedInQ + "\"");
 				resultStr.append(newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
@@ -871,8 +976,8 @@ public class NewFeatureGenerator {
 		args = new String[6];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_markpeng.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng_20150526.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_markpeng_20150526.csv";
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng.csv";
 		// args[3] =
