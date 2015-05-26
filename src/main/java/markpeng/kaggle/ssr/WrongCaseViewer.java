@@ -87,8 +87,12 @@ public class WrongCaseViewer {
 				double midMatchInTitle = Double.parseDouble(tokens[9]);
 				double suffixMatchInTitle = Double.parseDouble(tokens[10]);
 				int medianRelevance = Integer
-						.parseInt(tokens[tokens.length - 2]);
-				int predict = Integer.parseInt(tokens[tokens.length - 1]);
+						.parseInt(tokens[tokens.length - 6]);
+				int predict = Integer.parseInt(tokens[tokens.length - 5]);
+				double P1 = Double.parseDouble(tokens[tokens.length - 4]);
+				double P2 = Double.parseDouble(tokens[tokens.length - 3]);
+				double P3 = Double.parseDouble(tokens[tokens.length - 2]);
+				double P4 = Double.parseDouble(tokens[tokens.length - 1]);
 
 				System.out.println("[id=" + id + "]");
 				System.out.println("query:" + query);
@@ -103,6 +107,10 @@ public class WrongCaseViewer {
 				System.out.println("suffixMatchInTitle:" + suffixMatchInTitle);
 				System.out.println("median_relevance:" + medianRelevance);
 				System.out.println("predict:" + predict);
+				System.out.println("P1:" + P1);
+				System.out.println("P2:" + P2);
+				System.out.println("P3:" + P3);
+				System.out.println("P4:" + P4);
 
 				System.out.println("\n");
 				// System.out.println();
@@ -117,7 +125,7 @@ public class WrongCaseViewer {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[1];
-		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_rf_1563features_mtry=40_nodesize=1_ntree=500_20150523.csv";
+		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_rf_1563features_mtry=40_nodesize=1_ntree=500_kidsynonyms_20150524.csv";
 
 		WrongCaseViewer worker = new WrongCaseViewer();
 		worker.view(args[0]);

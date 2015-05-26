@@ -158,7 +158,7 @@ public class NewFeatureGenerator {
 		if (result.contains("parfum"))
 			result = result.replace("parfum", "perfume");
 		if (result.contains("fragrance"))
-			result = result.replace("fragrance", "perfume");
+			result = result.replace("fragrance", "fragrance perfume");
 
 		if (result.contains("plus size"))
 			result = result.replace("plus size", "women clothes");
@@ -196,11 +196,11 @@ public class NewFeatureGenerator {
 			String outputTest, String compoundPath, String smallWordPath)
 			throws Exception {
 
-		System.setOut(new PrintStream(
-				new BufferedOutputStream(
-						new FileOutputStream(
-								"/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_score4_20150518.txt")),
-				true));
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/preprocess_notmatched_score4_20150526.txt")),
+		// true));
 
 		List<String> compounds = readFile(compoundPath);
 		List<String> smallWords = readFile(smallWordPath);
@@ -267,9 +267,6 @@ public class NewFeatureGenerator {
 				String productDesc = tokens[3].replace("\"", "").trim();
 				int medianRelevance = Integer.parseInt(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
-
-				// if (id.equals("204"))
-				// System.out.println();
 
 				// preprocessing
 				String cleanQuery = processTextByLucene(getTextFromRawData(query));
@@ -353,106 +350,23 @@ public class NewFeatureGenerator {
 					}
 				}
 
+				// ----------------------------------------------------------------------------------------------------------------------------------------
+				// Features
+
 				// qInTitle
 				double qInTitle = (double) titleMatched / qTokens.size();
-
 				// qInDesc
 				double qInDesc = (double) descMatched / qTokens.size();
 
-				// matching statistics
-				if (medianRelevance == 4) {
-					if (qInTitle == 1 || qInDesc == 1)
-						score4MatchedCount++;
-					else {
-						System.out.println("\n[id=" + id + "]");
-						System.out.println("query:" + cleanQuery);
-						System.out
-								.println("product_title:" + cleanProductTitle);
-						System.out.println("product_description:"
-								+ cleanProductDesc);
-						System.out.println("median_relevance:"
-								+ medianRelevance);
-						System.out.println("qInTitle:" + qInTitle);
-						System.out.println("qInDesc:" + qInDesc);
-					}
-
-					score4Count++;
-				} else if (medianRelevance == 3) {
-					if (qInTitle == 1 || qInDesc == 1)
-						score3MatchedCount++;
-					else {
-						// System.out.println("\n[id=" + id + "]");
-						// System.out.println("query:" + cleanQuery);
-						// System.out
-						// .println("product_title:" + cleanProductTitle);
-						// System.out.println("product_description:"
-						// + cleanProductDesc);
-						// System.out.println("median_relevance:"
-						// + medianRelevance);
-					}
-
-					score3Count++;
-				} else if (medianRelevance == 2) {
-					if (qInTitle == 1 || qInDesc == 1)
-						score2MatchedCount++;
-					else {
-						// System.out.println("\n[id=" + id + "]");
-						// System.out.println("query:" + cleanQuery);
-						// System.out
-						// .println("product_title:" + cleanProductTitle);
-						// System.out.println("product_description:"
-						// + cleanProductDesc);
-						// System.out.println("median_relevance:"
-						// + medianRelevance);
-					}
-
-					score2Count++;
-				} else if (medianRelevance == 1) {
-					if (qInTitle == 1 || qInDesc == 1)
-						score1MatchedCount++;
-					else {
-						// System.out.println("\n[id=" + id + "]");
-						// System.out.println("query:" + cleanQuery);
-						// System.out
-						// .println("product_title:" + cleanProductTitle);
-						// System.out.println("product_description:"
-						// + cleanProductDesc);
-						// System.out.println("median_relevance:"
-						// + medianRelevance);
-					}
-
-					score1Count++;
-				}
-
 				String[] qTmp = cleanQuery.split("\\s");
+				String prefixQ = qTmp[0];
+				String suffixQ = qTmp[qTmp.length - 1];
+				String[] tTmp = cleanProductTitle.split("\\s");
 
 				// prefixMatch in title
 				int prefixMatchInTitle = 0;
-				String prefixQ = qTmp[0];
 				if (titleTokens.containsKey(prefixQ))
 					prefixMatchInTitle = 1;
-
-				// TODO:
-				// prefix match in 1st token of title
-				// 2nd match in 2nd token of title
-				// suffix match in last token of title
-				// query token match in 1st token of title
-				// query token match in 2nd token of title
-				// query token match in last token of title
-				// matched distance with query tokens in title and desc
-
-				// TODO:
-				// match in description
-
-				// TODO:
-				// compound match in prefix of title
-				// compound match in mid of title
-				// compound match in suffix of title
-
-				// TODO:
-				// fully matched or fully not matched flag in query token
-				// (either appearing in title or description)
-
 				// secondMatch in title
 				int secondMatchInTitle = 0;
 				if (qTmp.length >= 2) {
@@ -460,19 +374,101 @@ public class NewFeatureGenerator {
 					if (titleTokens.containsKey(secondQ))
 						secondMatchInTitle = 1;
 				}
-
 				// midMatch in title
 				int midMatchInTitle = 0;
 				for (int i = 1; i < qTmp.length - 1; i++) {
 					if (titleTokens.containsKey(qTmp[i]))
 						midMatchInTitle = 1;
 				}
-
 				// suffixMatch in title
 				int suffixMatchInTitle = 0;
-				String suffixQ = qTmp[qTmp.length - 1];
 				if (titleTokens.containsKey(suffixQ))
 					suffixMatchInTitle = 1;
+
+				// qSize
+				int qSize = qTokens.size();
+				// titleSize
+				int titleSize = titleTokens.size();
+				// descSize
+				int descSize = descTokens.size();
+
+				// titleRatio
+				double titleRatio = (double) titleMatched / titleTokens.size();
+				// descRatio
+				double descRatio = (double) descMatched / descTokens.size();
+
+				// prefix match in 1st token of title
+				int prefixMatchIn1stTokenOfTitle = 0;
+				if (prefixQ.equals(tTmp[0]))
+					prefixMatchIn1stTokenOfTitle = 1;
+				// 2nd match in 2nd token of title
+				int secondMatchIn2ndTokenOfTitle = 0;
+				if (qTmp.length >= 2 && tTmp.length >= 2) {
+					String secondQ = qTmp[1];
+					if (secondQ.equals(tTmp[1]))
+						secondMatchIn2ndTokenOfTitle = 1;
+				}
+				// suffix match in last token of title
+				int suffixMatchInLastTokenOfTitle = 0;
+				if (suffixQ.equals(tTmp[tTmp.length - 1]))
+					suffixMatchInLastTokenOfTitle = 1;
+
+				// query token match in 1st token of title
+				int matchIn1stTokenOfTitle = 0;
+				if (cleanQuery.contains(tTmp[0]))
+					matchIn1stTokenOfTitle = 1;
+				// query token match in 2nd token of title
+				int matchIn2ndTokenOfTitle = 0;
+				if (tTmp.length >= 2) {
+					if (cleanQuery.contains(tTmp[1]))
+						matchIn2ndTokenOfTitle = 1;
+				}
+				// query token match in last token of title
+				int matchInLastTokenOfTitle = 0;
+				if (cleanQuery.contains(tTmp[tTmp.length - 1]))
+					matchInLastTokenOfTitle = 1;
+
+				// compound match in prefix of title
+				int compoundMatchInTitlePrefix = 0;
+				if (qTmp.length >= 2 && tTmp.length >= 2) {
+					String compoundT = tTmp[0] + " " + tTmp[1];
+					for (int i = 0; i < qTmp.length; i++) {
+						if (i + 1 < qTmp.length) {
+							String compoundQ = qTmp[i] + " " + qTmp[i + 1];
+							if (compoundQ.equals(compoundT))
+								compoundMatchInTitlePrefix = 1;
+						}
+					}
+				}
+				// compound match in suffix of title
+				int compoundMatchInTitleSuffix = 0;
+				if (qTmp.length >= 2 && tTmp.length >= 2) {
+					String compoundT = tTmp[tTmp.length - 2] + " "
+							+ tTmp[tTmp.length - 1];
+					for (int i = 0; i < qTmp.length; i++) {
+						if (i + 1 < qTmp.length) {
+							String compoundQ = qTmp[i] + " " + qTmp[i + 1];
+							if (compoundQ.equals(compoundT))
+								compoundMatchInTitleSuffix = 1;
+						}
+					}
+				}
+
+				// fully matched or fully not matched flag in query token
+				// (either appearing in title or description)
+				int fullyMatchedInQ = 0;
+				if ((titleMatched + descMatched) >= qTokens.size())
+					fullyMatchedInQ = 1;
+				int fullyNotMatchedInQ = 0;
+				if ((titleMatched + descMatched) == 0)
+					fullyNotMatchedInQ = 1;
+
+				// TODO:
+				// query bigram topic words match in title
+				// title bigram topic words match in desc (DF=3)
+
+				// TODO:
+				// matched distance with query tokens in title and desc
 
 				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
 						+ cleanProductTitle + "\",\"" + cleanProductDesc

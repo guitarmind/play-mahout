@@ -158,7 +158,7 @@ public class DatasetCleaner {
 		if (result.contains("parfum"))
 			result = result.replace("parfum", "perfume");
 		if (result.contains("fragrance"))
-			result = result.replace("fragrance", "perfume");
+			result = result.replace("fragrance", "fragrance perfume");
 
 		if (result.contains("plus size"))
 			result = result.replace("plus size", "women clothes");
