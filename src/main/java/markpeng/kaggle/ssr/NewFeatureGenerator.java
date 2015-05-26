@@ -651,9 +651,13 @@ public class NewFeatureGenerator {
 				int descSize = descTokens.size();
 
 				// titleRatio
-				double titleRatio = (double) titleMatched / titleTokens.size();
+				double titleRatio = 0.0;
+				if (titleMatched > 0)
+					titleRatio = (double) titleMatched / titleTokens.size();
 				// descRatio
-				double descRatio = (double) descMatched / descTokens.size();
+				double descRatio = 0.0;
+				if (descMatched > 0)
+					descRatio = (double) descMatched / descTokens.size();
 
 				// prefix match in 1st token of title
 				int prefixMatchIn1stTokenOfTitle = 0;
