@@ -1136,6 +1136,255 @@ public class TermExtractor {
 		System.out.flush();
 	}
 
+	public void extractKeywordFromTitleAndDescriptionByScore(String trainFile,
+			String testFile, String outputTrain, String outputTest)
+			throws Exception {
+		TreeSet<String> score1UniqueTokens = new TreeSet<String>();
+		TreeSet<String> score2UniqueTokens = new TreeSet<String>();
+		TreeSet<String> score3UniqueTokens = new TreeSet<String>();
+		TreeSet<String> score4UniqueTokens = new TreeSet<String>();
+
+		TreeMap<String, TreeMap<String, Integer>> uniqueScore1keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+		TreeMap<String, TreeMap<String, Integer>> uniqueScore2keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+		TreeMap<String, TreeMap<String, Integer>> uniqueScore3keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+		TreeMap<String, TreeMap<String, Integer>> uniqueScore4keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+
+		TreeMap<String, TreeMap<String, Integer>> score1keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+		TreeMap<String, TreeMap<String, Integer>> score2keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+		TreeMap<String, TreeMap<String, Integer>> score3keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+		TreeMap<String, TreeMap<String, Integer>> score4keywordsInTitle = new TreeMap<String, TreeMap<String, Integer>>();
+
+		// System.setOut(new PrintStream(
+		// new BufferedOutputStream(
+		// new FileOutputStream(
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/query_train_relevance4_title_20150517.txt")),
+		// true));
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		BufferedReader testIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(testFile), "UTF-8"));
+
+		CsvParserSettings settings = new CsvParserSettings();
+		settings.setParseUnescapedQuotes(false);
+		settings.getFormat().setLineSeparator("\n");
+		settings.getFormat().setDelimiter(',');
+		settings.getFormat().setQuote('"');
+		settings.setHeaderExtractionEnabled(true);
+		settings.setEmptyValue("");
+		settings.setMaxCharsPerColumn(40960);
+
+		// -------------------------------------------------------------------------------------------
+		// Train Data
+
+		try {
+
+			// creates a CSV parser
+			CsvParser trainParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			trainParser.beginParsing(trainIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = trainParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+				int medianRelevance = Integer.parseInt(tokens[4]);
+				double relevance_variance = Double.parseDouble(tokens[5]);
+
+				// preprocessing (all ready cleaned)
+				String cleanProductTitle = productTitle;
+				String cleanProductDesc = productDesc;
+
+				List<String> titleTokens = getTermsAsListByLucene(cleanProductTitle);
+				List<String> descTokens = getTermsAsListByLucene(cleanProductDesc);
+
+				if (!uniqueScore1keywordsInTitle.containsKey(query))
+					uniqueScore1keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+				if (!uniqueScore2keywordsInTitle.containsKey(query))
+					uniqueScore2keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+				if (!uniqueScore3keywordsInTitle.containsKey(query))
+					uniqueScore3keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+				if (!uniqueScore4keywordsInTitle.containsKey(query))
+					uniqueScore4keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+
+				if (!score1keywordsInTitle.containsKey(query))
+					score1keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+				if (!score2keywordsInTitle.containsKey(query))
+					score2keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+				if (!score3keywordsInTitle.containsKey(query))
+					score3keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+				if (!score4keywordsInTitle.containsKey(query))
+					score4keywordsInTitle.put(query,
+							new TreeMap<String, Integer>());
+
+				if (medianRelevance == 1) {
+					for (String k : titleTokens) {
+						if (!score1keywordsInTitle.get(query).containsKey(k))
+							score1keywordsInTitle.get(query).put(k, 1);
+						else
+							score1keywordsInTitle.get(query)
+									.put(k,
+											score1keywordsInTitle.get(query)
+													.get(k) + 1);
+					}
+				} else if (medianRelevance == 2) {
+					for (String k : titleTokens) {
+						if (!score2keywordsInTitle.get(query).containsKey(k))
+							score2keywordsInTitle.get(query).put(k, 1);
+						else
+							score2keywordsInTitle.get(query)
+									.put(k,
+											score2keywordsInTitle.get(query)
+													.get(k) + 1);
+					}
+				} else if (medianRelevance == 3) {
+					for (String k : titleTokens) {
+						if (!score3keywordsInTitle.get(query).containsKey(k))
+							score3keywordsInTitle.get(query).put(k, 1);
+						else
+							score3keywordsInTitle.get(query)
+									.put(k,
+											score3keywordsInTitle.get(query)
+													.get(k) + 1);
+					}
+				} else if (medianRelevance == 4) {
+					for (String k : titleTokens) {
+						if (!score4keywordsInTitle.get(query).containsKey(k))
+							score4keywordsInTitle.get(query).put(k, 1);
+						else
+							score4keywordsInTitle.get(query)
+									.put(k,
+											score4keywordsInTitle.get(query)
+													.get(k) + 1);
+					}
+				} else
+					throw new Exception("Impossible!!!");
+
+				// List<String> titleTokens = getNgramTermsAsListByLucene(
+				// cleanProductTitle, 2, 3, true, false);
+				// List<String> descTokens = getNgramTermsAsListByLucene(
+				// cleanProductDesc, 2, 3, true, false);
+
+				// System.out.println("[id=" + id + "]");
+				// System.out.println("query:" + query);
+				// System.out.println("product_title:" + productTitle);
+				// System.out.println("product_description:" + productDesc);
+				// System.out.println("relevance_variance:" +
+				// relevance_variance);
+				// System.out.println("median_relevance:" + medianRelevance);
+
+				count++;
+			}
+
+			System.out.println("\nTotal train records: " + count);
+
+		} finally {
+			trainIn.close();
+		}
+
+		// -------------------------------------------------------------------------------------------
+		// Test Data
+
+		TreeMap<String, List<String>> titleTokensByQueryInTest = new TreeMap<String, List<String>>();
+
+		try {
+
+			// creates a CSV parser
+			CsvParser testParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			testParser.beginParsing(testIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = testParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+
+				// preprocessing (all ready cleaned)
+				String cleanProductTitle = productTitle;
+				String cleanProductDesc = productDesc;
+
+				List<String> titleTokens = getTermsAsListByLucene(cleanProductTitle);
+				List<String> descTokens = getTermsAsListByLucene(cleanProductDesc);
+
+				if (!titleTokensByQueryInTest.containsKey(query)) {
+					titleTokensByQueryInTest.put(query, new ArrayList<String>(
+							titleTokens));
+				} else {
+					List<String> currentTitleTokens = titleTokensByQueryInTest
+							.get(query);
+					for (String t : titleTokens) {
+						if (!currentTitleTokens.contains(t))
+							currentTitleTokens.add(t);
+					}
+
+					titleTokensByQueryInTest.put(query, currentTitleTokens);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total test records: " + count);
+
+		} finally {
+			testIn.close();
+		}
+
+		for (String query : score1keywordsInTitle.keySet()) {
+			TreeMap<String, Integer> keywords = score1keywordsInTitle
+					.get(query);
+
+			List<String> testTitleTokens = titleTokensByQueryInTest.get(query);
+
+			for (String k : keywords.keySet()) {
+				if (testTitleTokens.contains(k)
+						&& !score2keywordsInTitle.get(query).containsKey(k)
+						&& !score3keywordsInTitle.get(query).containsKey(k)
+						&& !score4keywordsInTitle.get(query).containsKey(k)) {
+					// if (score1keywordsInTitle.get(query).get(k) >= 2)
+					uniqueScore1keywordsInTitle.get(query).put(k,
+							score1keywordsInTitle.get(query).get(k));
+
+					if (k.length() > 1 && !score1UniqueTokens.contains(k))
+						score1UniqueTokens.add(k);
+				}
+			}
+		}
+
+		if (uniqueScore1keywordsInTitle.size() > 0) {
+			System.out
+					.println("[Score 1 Unique Keywords, exists in test daset too]");
+			for (String q : uniqueScore1keywordsInTitle.keySet()) {
+				System.out.println("\n[Query=" + q + "]");
+				TreeMap<String, Integer> keywords = uniqueScore1keywordsInTitle
+						.get(q);
+				for (String k : keywords.keySet()) {
+					System.out.println(k + " (" + keywords.get(k) + " times)");
+				}
+			}
+
+			System.out.println("Total unique score-1 token in title: "
+					+ uniqueScore1keywordsInTitle.size());
+		}
+
+		System.out.flush();
+	}
+
 	public String getTextFromRawData(String raw) {
 		String result = raw;
 
@@ -1370,10 +1619,14 @@ public class TermExtractor {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[5];
-		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
-		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_markpeng.csv";
+		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_newfeature_markpeng_20150530.csv";
+		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_newfeature_markpeng_20150530.csv";
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng_20150601.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_markpeng_20150601.csv";
 		args[4] = "/home/markpeng/Share/Kaggle/Search Results Relevance/JOrtho/dictionary_en_2015_05/IncludedWords.txt";
 
 		if (args.length < 5) {
@@ -1401,8 +1654,11 @@ public class TermExtractor {
 		// outputTrain, outputTest);
 		// worker.extractBigramTopicCompoundFromTitleMappingInDescription(
 		// trainFile, testFile, outputTrain, outputTest);
-		worker.extractSmallerWordsBaseOnQuery(trainFile, testFile, outputTrain,
-				outputTest);
+		// worker.extractSmallerWordsBaseOnQuery(trainFile, testFile,
+		// outputTrain,
+		// outputTest);
+		worker.extractKeywordFromTitleAndDescriptionByScore(trainFile,
+				testFile, outputTrain, outputTest);
 
 	}
 }
