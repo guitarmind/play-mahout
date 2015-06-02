@@ -1137,8 +1137,9 @@ public class TermExtractor {
 	}
 
 	public void extractKeywordFromTitleAndDescriptionByScore(String trainFile,
-			String testFile, String outputTrain, String outputTest)
-			throws Exception {
+			String testFile, String outputFeatureFile) throws Exception {
+		TreeSet<String> allUniqueTokens = new TreeSet<String>();
+
 		TreeSet<String> score1UniqueTokens = new TreeSet<String>();
 		TreeSet<String> score2UniqueTokens = new TreeSet<String>();
 		TreeSet<String> score3UniqueTokens = new TreeSet<String>();
@@ -1357,18 +1358,101 @@ public class TermExtractor {
 						&& !score3keywordsInTitle.get(query).containsKey(k)
 						&& !score4keywordsInTitle.get(query).containsKey(k)) {
 					// if (score1keywordsInTitle.get(query).get(k) >= 2)
-					uniqueScore1keywordsInTitle.get(query).put(k,
-							score1keywordsInTitle.get(query).get(k));
+					if (k.length() > 1) {
+						uniqueScore1keywordsInTitle.get(query).put(k,
+								score1keywordsInTitle.get(query).get(k));
 
-					if (k.length() > 1 && !score1UniqueTokens.contains(k))
-						score1UniqueTokens.add(k);
+						if (!score1UniqueTokens.contains(k))
+							score1UniqueTokens.add(k);
+
+						if (!allUniqueTokens.contains(k))
+							allUniqueTokens.add(k);
+					}
+				}
+			}
+		}
+
+		for (String query : score2keywordsInTitle.keySet()) {
+			TreeMap<String, Integer> keywords = score2keywordsInTitle
+					.get(query);
+
+			List<String> testTitleTokens = titleTokensByQueryInTest.get(query);
+
+			for (String k : keywords.keySet()) {
+				if (testTitleTokens.contains(k)
+						&& !score1keywordsInTitle.get(query).containsKey(k)
+						&& !score3keywordsInTitle.get(query).containsKey(k)
+						&& !score4keywordsInTitle.get(query).containsKey(k)) {
+					// if (score1keywordsInTitle.get(query).get(k) >= 2)
+					if (k.length() > 1) {
+						uniqueScore2keywordsInTitle.get(query).put(k,
+								score2keywordsInTitle.get(query).get(k));
+
+						if (!score2UniqueTokens.contains(k))
+							score2UniqueTokens.add(k);
+
+						if (!allUniqueTokens.contains(k))
+							allUniqueTokens.add(k);
+					}
+				}
+			}
+		}
+
+		for (String query : score3keywordsInTitle.keySet()) {
+			TreeMap<String, Integer> keywords = score3keywordsInTitle
+					.get(query);
+
+			List<String> testTitleTokens = titleTokensByQueryInTest.get(query);
+
+			for (String k : keywords.keySet()) {
+				if (testTitleTokens.contains(k)
+						&& !score1keywordsInTitle.get(query).containsKey(k)
+						&& !score2keywordsInTitle.get(query).containsKey(k)
+						&& !score4keywordsInTitle.get(query).containsKey(k)) {
+					// if (score1keywordsInTitle.get(query).get(k) >= 2)
+					if (k.length() > 1) {
+						uniqueScore3keywordsInTitle.get(query).put(k,
+								score3keywordsInTitle.get(query).get(k));
+
+						if (!score3UniqueTokens.contains(k))
+							score3UniqueTokens.add(k);
+
+						if (!allUniqueTokens.contains(k))
+							allUniqueTokens.add(k);
+					}
+				}
+			}
+		}
+
+		for (String query : score4keywordsInTitle.keySet()) {
+			TreeMap<String, Integer> keywords = score4keywordsInTitle
+					.get(query);
+
+			List<String> testTitleTokens = titleTokensByQueryInTest.get(query);
+
+			for (String k : keywords.keySet()) {
+				if (testTitleTokens.contains(k)
+						&& !score1keywordsInTitle.get(query).containsKey(k)
+						&& !score2keywordsInTitle.get(query).containsKey(k)
+						&& !score3keywordsInTitle.get(query).containsKey(k)) {
+					// if (score1keywordsInTitle.get(query).get(k) >= 2)
+					if (k.length() > 1) {
+						uniqueScore4keywordsInTitle.get(query).put(k,
+								score4keywordsInTitle.get(query).get(k));
+
+						if (!score4UniqueTokens.contains(k))
+							score4UniqueTokens.add(k);
+
+						if (!allUniqueTokens.contains(k))
+							allUniqueTokens.add(k);
+					}
 				}
 			}
 		}
 
 		if (uniqueScore1keywordsInTitle.size() > 0) {
 			System.out
-					.println("[Score 1 Unique Keywords, exists in test daset too]");
+					.println("[Score 1 Unique Keywords, exists in test dataset too]");
 			for (String q : uniqueScore1keywordsInTitle.keySet()) {
 				System.out.println("\n[Query=" + q + "]");
 				TreeMap<String, Integer> keywords = uniqueScore1keywordsInTitle
@@ -1379,8 +1463,71 @@ public class TermExtractor {
 			}
 
 			System.out.println("Total unique score-1 token in title: "
-					+ uniqueScore1keywordsInTitle.size());
+					+ score1UniqueTokens.size());
+
 		}
+
+		if (uniqueScore2keywordsInTitle.size() > 0) {
+			System.out
+					.println("[Score 2 Unique Keywords, exists in test dataset too]");
+			for (String q : uniqueScore2keywordsInTitle.keySet()) {
+				System.out.println("\n[Query=" + q + "]");
+				TreeMap<String, Integer> keywords = uniqueScore2keywordsInTitle
+						.get(q);
+				for (String k : keywords.keySet()) {
+					System.out.println(k + " (" + keywords.get(k) + " times)");
+				}
+			}
+
+			System.out.println("Total unique score-2 token in title: "
+					+ score2UniqueTokens.size());
+
+		}
+
+		if (uniqueScore3keywordsInTitle.size() > 0) {
+			System.out
+					.println("[Score 3 Unique Keywords, exists in test dataset too]");
+			for (String q : uniqueScore3keywordsInTitle.keySet()) {
+				System.out.println("\n[Query=" + q + "]");
+				TreeMap<String, Integer> keywords = uniqueScore3keywordsInTitle
+						.get(q);
+				for (String k : keywords.keySet()) {
+					System.out.println(k + " (" + keywords.get(k) + " times)");
+				}
+			}
+
+			System.out.println("Total unique score-3 token in title: "
+					+ score3UniqueTokens.size());
+
+		}
+
+		if (uniqueScore4keywordsInTitle.size() > 0) {
+			System.out
+					.println("[Score 4 Unique Keywords, exists in test dataset too]");
+			for (String q : uniqueScore4keywordsInTitle.keySet()) {
+				System.out.println("\n[Query=" + q + "]");
+				TreeMap<String, Integer> keywords = uniqueScore4keywordsInTitle
+						.get(q);
+				for (String k : keywords.keySet()) {
+					System.out.println(k + " (" + keywords.get(k) + " times)");
+				}
+			}
+
+			System.out.println("Total unique score-4 token in title: "
+					+ score4UniqueTokens.size());
+
+		}
+
+		// write to file
+		BufferedWriter featureOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputFeatureFile, false), "UTF-8"));
+		for (String k : allUniqueTokens)
+			featureOut.append(k + newLine);
+		featureOut.flush();
+		featureOut.close();
+
+		System.out.println("Total unique all token in title: "
+				+ allUniqueTokens.size());
 
 		System.out.flush();
 	}
@@ -1657,8 +1804,10 @@ public class TermExtractor {
 		// worker.extractSmallerWordsBaseOnQuery(trainFile, testFile,
 		// outputTrain,
 		// outputTest);
-		worker.extractKeywordFromTitleAndDescriptionByScore(trainFile,
-				testFile, outputTrain, outputTest);
+		worker.extractKeywordFromTitleAndDescriptionByScore(
+				trainFile,
+				testFile,
+				"/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_20150602.txt");
 
 	}
 }
