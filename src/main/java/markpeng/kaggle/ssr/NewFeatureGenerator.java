@@ -1,39 +1,32 @@
 package markpeng.kaggle.ssr;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.KStemFilter;
+import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.search.spell.LevensteinDistance;
 import org.apache.lucene.search.spell.NGramDistance;
-import org.apache.lucene.search.spell.PlainTextDictionary;
-import org.apache.lucene.search.spell.SpellChecker;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -186,6 +179,11 @@ public class NewFeatureGenerator {
 		if (result.contains("kid"))
 			result = result.replace("kid", "child");
 
+		if (result.contains("boots"))
+			result = result.replace("boots", "shoe");
+		if (result.contains("boot"))
+			result = result.replace("boot", "shoe");
+
 		// if (result.contains(""))
 		// result = result.replace("", "");
 
@@ -243,7 +241,9 @@ public class NewFeatureGenerator {
 						+ "prefixMatchIn1stTokenOfTitle\",\"secondMatchIn2ndTokenOfTitle\",\"suffixMatchInLastTokenOfTitle\",\""
 						+ "matchIn1stTokenOfTitle\",\"matchIn2ndTokenOfTitle\",\"matchInLastTokenOfTitle\",\""
 						+ "compoundMatchInTitlePrefix\",\"compoundMatchInTitleSuffix\",\""
-						+ "fullyMatchedInQ\",\"fullyNotMatchedInQ\"");
+						+ "qBigramDistanceInTitle\",\"qBigramDistanceInDesc\",\""
+						+ "bigramMatchInTitle\",\"bigramMatchInDesc\"");
+		// + "fullyMatchedInQ\",\"fullyNotMatchedInQ\"");
 		resultStr.append(newLine);
 
 		try {
@@ -263,10 +263,14 @@ public class NewFeatureGenerator {
 				int medianRelevance = Integer.parseInt(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
 
+				// missing description: use title
+				if (productDesc.length() < 3)
+					productDesc = productTitle;
+
 				// preprocessing
-				String cleanQuery = processTextByLucene(getTextFromRawData(query));
-				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
-				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+				String cleanQuery = processTextByLuceneWithKStem(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLuceneWithKStem(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLuceneWithKStem(getTextFromRawData(productDesc));
 
 				// replace compounds
 				for (String c : compounds) {
@@ -288,10 +292,16 @@ public class NewFeatureGenerator {
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, s);
 				}
+
 				// replace all synonyms
 				cleanQuery = replaceSynonyms(cleanQuery);
 				cleanProductTitle = replaceSynonyms(cleanProductTitle);
 				cleanProductDesc = replaceSynonyms(cleanProductDesc);
+
+				// use porter stemming afterwards
+				cleanQuery = processTextByLuceneWithPorter(cleanQuery);
+				cleanProductTitle = processTextByLuceneWithPorter(cleanProductTitle);
+				cleanProductDesc = processTextByLuceneWithPorter(cleanProductDesc);
 
 				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
 						cleanQuery, true, true);
@@ -357,6 +367,7 @@ public class NewFeatureGenerator {
 				String prefixQ = qTmp[0];
 				String suffixQ = qTmp[qTmp.length - 1];
 				String[] tTmp = cleanProductTitle.split("\\s");
+				String[] dTmp = cleanProductDesc.split("\\s");
 
 				// prefixMatch in title
 				int prefixMatchInTitle = 0;
@@ -453,44 +464,54 @@ public class NewFeatureGenerator {
 					}
 				}
 
+				// [disabled, not good]
 				// fully matched or fully not matched flag in query token
 				// (either appearing in title or description)
-				int fullyMatchedInQ = 0;
-				if ((titleMatched + descMatched) >= qTokens.size())
-					fullyMatchedInQ = 1;
-				int fullyNotMatchedInQ = 0;
-				if ((titleMatched + descMatched) == 0)
-					fullyNotMatchedInQ = 1;
+				// int fullyMatchedInQ = 0;
+				// if ((titleMatched + descMatched) >= qTokens.size())
+				// fullyMatchedInQ = 1;
+				// int fullyNotMatchedInQ = 0;
+				// if ((titleMatched + descMatched) == 0)
+				// fullyNotMatchedInQ = 1;
 
 				// TODO:
 				// query bigram topic words match in title
 				// title bigram topic words match in desc (DF=3)
 
-				// TODO:
 				// matched distance with query tokens in title and desc
+				double qBigramDistanceInTitle = bigramDistance(cleanQuery,
+						cleanProductTitle);
+				double qBigramDistanceInDesc = bigramDistance(cleanQuery,
+						cleanProductDesc);
 
-				resultStr
-						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
-								+ cleanProductTitle + "\",\""
-								+ cleanProductDesc + "\",\"" + medianRelevance
-								+ "\",\"" + relevance_variance + "\",\""
-								+ qInTitle + "\",\"" + qInDesc + "\",\""
-								+ prefixMatchInTitle + "\",\""
-								+ secondMatchInTitle + "\",\""
-								+ midMatchInTitle + "\",\""
-								+ suffixMatchInTitle + "\",\"" + qSize
-								+ "\",\"" + titleSize + "\",\"" + descSize
-								+ "\",\"" + titleRatio + "\",\"" + descRatio
-								+ "\",\"" + prefixMatchIn1stTokenOfTitle
-								+ "\",\"" + secondMatchIn2ndTokenOfTitle
-								+ "\",\"" + suffixMatchInLastTokenOfTitle
-								+ "\",\"" + matchIn1stTokenOfTitle + "\",\""
-								+ matchIn2ndTokenOfTitle + "\",\""
-								+ matchInLastTokenOfTitle + "\",\""
-								+ compoundMatchInTitlePrefix + "\",\""
-								+ compoundMatchInTitleSuffix + "\",\""
-								+ fullyMatchedInQ + "\",\""
-								+ fullyNotMatchedInQ + "\"");
+				// bigram match in title
+				int bigramMatchInTitle = bigramCounts(cleanQuery,
+						cleanProductTitle);
+
+				// bigram match in desc
+				int bigramMatchInDesc = bigramCounts(cleanQuery,
+						cleanProductDesc);
+
+				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
+						+ cleanProductTitle + "\",\"" + cleanProductDesc
+						+ "\",\"" + medianRelevance + "\",\""
+						+ relevance_variance + "\",\"" + qInTitle + "\",\""
+						+ qInDesc + "\",\"" + prefixMatchInTitle + "\",\""
+						+ secondMatchInTitle + "\",\"" + midMatchInTitle
+						+ "\",\"" + suffixMatchInTitle + "\",\"" + qSize
+						+ "\",\"" + titleSize + "\",\"" + descSize + "\",\""
+						+ titleRatio + "\",\"" + descRatio + "\",\""
+						+ prefixMatchIn1stTokenOfTitle + "\",\""
+						+ secondMatchIn2ndTokenOfTitle + "\",\""
+						+ suffixMatchInLastTokenOfTitle + "\",\""
+						+ matchIn1stTokenOfTitle + "\",\""
+						+ matchIn2ndTokenOfTitle + "\",\""
+						+ matchInLastTokenOfTitle + "\",\""
+						+ compoundMatchInTitlePrefix + "\",\""
+						+ compoundMatchInTitleSuffix + "\",\""
+						+ qBigramDistanceInTitle + "\",\""
+						+ qBigramDistanceInDesc + "\",\"" + bigramMatchInTitle
+						+ "\",\"" + bigramMatchInDesc + "\"");
 				resultStr.append(newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
@@ -525,7 +546,9 @@ public class NewFeatureGenerator {
 						+ "prefixMatchIn1stTokenOfTitle\",\"secondMatchIn2ndTokenOfTitle\",\"suffixMatchInLastTokenOfTitle\",\""
 						+ "matchIn1stTokenOfTitle\",\"matchIn2ndTokenOfTitle\",\"matchInLastTokenOfTitle\",\""
 						+ "compoundMatchInTitlePrefix\",\"compoundMatchInTitleSuffix\",\""
-						+ "fullyMatchedInQ\",\"fullyNotMatchedInQ\"");
+						+ "qBigramDistanceInTitle\",\"qBigramDistanceInDesc\",\""
+						+ "bigramMatchInTitle\",\"bigramMatchInDesc\"");
+		// + "fullyMatchedInQ\",\"fullyNotMatchedInQ\"");
 		resultStr.append(newLine);
 
 		try {
@@ -543,10 +566,14 @@ public class NewFeatureGenerator {
 				String productTitle = tokens[2].replace("\"", "").trim();
 				String productDesc = tokens[3].replace("\"", "").trim();
 
+				// missing description: use title
+				if (productDesc.length() < 3)
+					productDesc = productTitle;
+
 				// preprocessing
-				String cleanQuery = processTextByLucene(getTextFromRawData(query));
-				String cleanProductTitle = processTextByLucene(getTextFromRawData(productTitle));
-				String cleanProductDesc = processTextByLucene(getTextFromRawData(productDesc));
+				String cleanQuery = processTextByLuceneWithKStem(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLuceneWithKStem(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLuceneWithKStem(getTextFromRawData(productDesc));
 
 				// replace compounds
 				for (String c : compounds) {
@@ -572,6 +599,11 @@ public class NewFeatureGenerator {
 				cleanQuery = replaceSynonyms(cleanQuery);
 				cleanProductTitle = replaceSynonyms(cleanProductTitle);
 				cleanProductDesc = replaceSynonyms(cleanProductDesc);
+
+				// use porter stemming afterwards
+				cleanQuery = processTextByLuceneWithPorter(cleanQuery);
+				cleanProductTitle = processTextByLuceneWithPorter(cleanProductTitle);
+				cleanProductDesc = processTextByLuceneWithPorter(cleanProductDesc);
 
 				Hashtable<String, Integer> qTokens = getTermFreqByLucene(
 						cleanQuery, true, true);
@@ -620,6 +652,7 @@ public class NewFeatureGenerator {
 				String prefixQ = qTmp[0];
 				String suffixQ = qTmp[qTmp.length - 1];
 				String[] tTmp = cleanProductTitle.split("\\s");
+				String[] dTmp = cleanProductDesc.split("\\s");
 
 				// prefixMatch in title
 				int prefixMatchInTitle = 0;
@@ -716,43 +749,53 @@ public class NewFeatureGenerator {
 					}
 				}
 
+				// [disabled, not good]
 				// fully matched or fully not matched flag in query token
 				// (either appearing in title or description)
-				int fullyMatchedInQ = 0;
-				if ((titleMatched + descMatched) >= qTokens.size())
-					fullyMatchedInQ = 1;
-				int fullyNotMatchedInQ = 0;
-				if ((titleMatched + descMatched) == 0)
-					fullyNotMatchedInQ = 1;
+				// int fullyMatchedInQ = 0;
+				// if ((titleMatched + descMatched) >= qTokens.size())
+				// fullyMatchedInQ = 1;
+				// int fullyNotMatchedInQ = 0;
+				// if ((titleMatched + descMatched) == 0)
+				// fullyNotMatchedInQ = 1;
 
 				// TODO:
 				// query bigram topic words match in title
 				// title bigram topic words match in desc (DF=3)
 
-				// TODO:
 				// matched distance with query tokens in title and desc
+				double qBigramDistanceInTitle = bigramDistance(cleanQuery,
+						cleanProductTitle);
+				double qBigramDistanceInDesc = bigramDistance(cleanQuery,
+						cleanProductDesc);
 
-				resultStr
-						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
-								+ cleanProductTitle + "\",\""
-								+ cleanProductDesc + "\",\"" + qInTitle
-								+ "\",\"" + qInDesc + "\",\""
-								+ prefixMatchInTitle + "\",\""
-								+ secondMatchInTitle + "\",\""
-								+ midMatchInTitle + "\",\""
-								+ suffixMatchInTitle + "\",\"" + qSize
-								+ "\",\"" + titleSize + "\",\"" + descSize
-								+ "\",\"" + titleRatio + "\",\"" + descRatio
-								+ "\",\"" + prefixMatchIn1stTokenOfTitle
-								+ "\",\"" + secondMatchIn2ndTokenOfTitle
-								+ "\",\"" + suffixMatchInLastTokenOfTitle
-								+ "\",\"" + matchIn1stTokenOfTitle + "\",\""
-								+ matchIn2ndTokenOfTitle + "\",\""
-								+ matchInLastTokenOfTitle + "\",\""
-								+ compoundMatchInTitlePrefix + "\",\""
-								+ compoundMatchInTitleSuffix + "\",\""
-								+ fullyMatchedInQ + "\",\""
-								+ fullyNotMatchedInQ + "\"");
+				// bigram match in title
+				int bigramMatchInTitle = bigramCounts(cleanQuery,
+						cleanProductTitle);
+
+				// bigram match in desc
+				int bigramMatchInDesc = bigramCounts(cleanQuery,
+						cleanProductDesc);
+
+				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
+						+ cleanProductTitle + "\",\"" + cleanProductDesc
+						+ "\",\"" + qInTitle + "\",\"" + qInDesc + "\",\""
+						+ prefixMatchInTitle + "\",\"" + secondMatchInTitle
+						+ "\",\"" + midMatchInTitle + "\",\""
+						+ suffixMatchInTitle + "\",\"" + qSize + "\",\""
+						+ titleSize + "\",\"" + descSize + "\",\"" + titleRatio
+						+ "\",\"" + descRatio + "\",\""
+						+ prefixMatchIn1stTokenOfTitle + "\",\""
+						+ secondMatchIn2ndTokenOfTitle + "\",\""
+						+ suffixMatchInLastTokenOfTitle + "\",\""
+						+ matchIn1stTokenOfTitle + "\",\""
+						+ matchIn2ndTokenOfTitle + "\",\""
+						+ matchInLastTokenOfTitle + "\",\""
+						+ compoundMatchInTitlePrefix + "\",\""
+						+ compoundMatchInTitleSuffix + "\",\""
+						+ qBigramDistanceInTitle + "\",\""
+						+ qBigramDistanceInDesc + "\",\"" + bigramMatchInTitle
+						+ "\",\"" + bigramMatchInDesc + "\"");
 				resultStr.append(newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
@@ -881,7 +924,7 @@ public class NewFeatureGenerator {
 		return result;
 	}
 
-	public String processTextByLucene(String text) throws IOException {
+	public String processTextByLuceneWithKStem(String text) throws IOException {
 		String result = text;
 
 		StringBuffer postText = new StringBuffer();
@@ -931,6 +974,166 @@ public class NewFeatureGenerator {
 		}
 
 		return result;
+	}
+
+	public String processTextByLuceneWithPorter(String text) throws IOException {
+		String result = text;
+
+		StringBuffer postText = new StringBuffer();
+		Set stopWords = new StandardAnalyzer(Version.LUCENE_46)
+				.getStopwordSet();
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
+		ts = new StopFilter(Version.LUCENE_46, ts, (CharArraySet) stopWords);
+		int flags = WordDelimiterFilter.SPLIT_ON_NUMERICS
+				| WordDelimiterFilter.SPLIT_ON_CASE_CHANGE
+				| WordDelimiterFilter.GENERATE_NUMBER_PARTS
+				| WordDelimiterFilter.GENERATE_WORD_PARTS;
+		ts = new WordDelimiterFilter(ts, flags, null);
+		ts = new LowerCaseFilter(Version.LUCENE_46, ts);
+		ts = new PorterStemFilter(ts);
+
+		try {
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+
+					postText.append(word + " ");
+					// System.out.println(word);
+
+					wordCount++;
+				}
+			}
+
+			String finalText = postText.toString().trim().replace("'", "");
+			if (finalText.length() > 1)
+				result = finalText;
+
+		} finally {
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
+		}
+
+		return result;
+	}
+
+	private List<String> getNgramTermsAsListByLucene(String text, int ngram,
+			int minTokenLen, boolean english, boolean digits)
+			throws IOException {
+		List<String> result = new ArrayList<String>();
+
+		TokenStream ts = new StandardTokenizer(Version.LUCENE_46,
+				new StringReader(text));
+		ts = new ShingleFilter(ts, ngram, ngram);
+		try {
+			CharTermAttribute termAtt = ts
+					.addAttribute(CharTermAttribute.class);
+			ts.reset();
+			int wordCount = 0;
+			here: while (ts.incrementToken()) {
+				if (termAtt.length() > 0) {
+					String word = termAtt.toString();
+
+					String[] tokens = word.split("\\s");
+					if (tokens.length == ngram) {
+
+						for (String token : tokens) {
+							if (token.length() < minTokenLen)
+								continue here;
+						}
+
+						boolean valid = false;
+
+						if (english && !digits)
+							valid = isAllEnglish(word);
+						else if (!english && digits)
+							valid = isAllDigits(word);
+						else if (english && digits)
+							valid = isAllEnglishAndDigits(word);
+
+						if (valid) {
+							if (!result.contains(word))
+								result.add(word);
+						}
+					}
+
+					wordCount++;
+				}
+			}
+
+		} finally {
+			// Fixed error : close ts:TokenStream
+			ts.end();
+			ts.close();
+		}
+
+		return result;
+	}
+
+	public double bigramDistance(String query, String text) throws IOException {
+		double dist = 0;
+
+		// create query bigrams
+		List<String> bigramTokensInQ = getNgramTermsAsListByLucene(query, 2, 1,
+				true, true);
+
+		List<String> textTokens = Arrays.asList(text.split("\\s"));
+
+		for (String bigram : bigramTokensInQ) {
+			if (text.contains(bigram)) {
+				// do nothing
+				// if (dist == 999)
+				// dist = 0;
+			} else {
+				String[] bigramTokens = bigram.split("\\s");
+
+				if (textTokens.contains(bigramTokens[0])
+						&& textTokens.contains(bigramTokens[1])) {
+					int matchedOne = textTokens.indexOf(bigramTokens[0]);
+					int matchedTwo = textTokens.indexOf(bigramTokens[1]);
+					int matchedDist = Math.abs(matchedOne - matchedTwo);
+					if (matchedDist != 1) {
+						// if (dist == 999)
+						// dist = matchedDist;
+						// else
+						dist += matchedDist;
+					}
+				} else {
+					// give penalty
+					dist += 5;
+				}
+
+			}
+		}
+
+		return Math.log(dist + 1);
+		// return dist;
+	}
+
+	public int bigramCounts(String query, String text) throws IOException {
+		int count = 0;
+
+		// create query bigrams
+		List<String> bigramTokensInQ = getNgramTermsAsListByLucene(query, 2, 1,
+				true, true);
+
+		String[] textTokens = text.split("\\s");
+		for (String bigram : bigramTokensInQ) {
+			for (int i = 0; i < textTokens.length; i++) {
+				if (i + 1 < textTokens.length) {
+					String compound = textTokens[i] + " " + textTokens[i + 1];
+					if (compound.equals(bigram))
+						count++;
+				}
+			}
+		}
+
+		return count;
 	}
 
 	public boolean isAllEnglish(String text) {
@@ -984,8 +1187,8 @@ public class NewFeatureGenerator {
 		args = new String[6];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng_20150526.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_markpeng_20150526.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng.csv";
 		// args[3] =
@@ -1011,5 +1214,28 @@ public class NewFeatureGenerator {
 		NewFeatureGenerator worker = new NewFeatureGenerator();
 		worker.generate(trainFile, testFile, outputTrain, outputTest,
 				compoundPath, smallWordPath);
+
+		// String query = "high heel shoe";
+		// String text =
+		// "montreal canadien resin logo high heel shoe wine bottle holder";
+		// String query = "pot pan set";
+		// String text =
+		// "cook n home stainless steel 4 piece pasta cooker steamer multi pot encapsulate bottom 8 quart";
+		// String query = "multiple phone charger";
+		// String text =
+		// "samsung galaxy s 5 mini 16 gb unlock gsm dual sim cell phone";
+		// String query = "bicycle lock";
+		// String text =
+		// "sport rack sr 2902 lr lock tilt platform hitch bicycle rack 4 bicycle capacity";
+		// String query = "reuse straw";
+		// String text =
+		// "your party guest go loopy over crazy loop straw 4 pack they great birthday party luau party just everyday fun the reuse straw come assorted colors measure 11 long they fun colorful addition any occasion child would love taking them home party favor combine them other colorful birthday party supplies decoration help make your party complete";
+		// String query = "";
+		// String text = "";
+		// double dist = worker.bigramDistance(query, text);
+		// System.out.println("Dist: " + dist);
+		// int count = worker.bigramCounts(query, text);
+		// System.out.println("Counts: " + count);
+
 	}
 }

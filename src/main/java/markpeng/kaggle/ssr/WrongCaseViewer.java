@@ -49,11 +49,17 @@ public class WrongCaseViewer {
 
 	public void view(String file) throws Exception {
 
+		System.setOut(new PrintStream(
+				new BufferedOutputStream(
+						new FileOutputStream(
+								"/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_case_xgb_4498features_d=60_20150605.txt")),
+				true));
+
 		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
 				new FileInputStream(file), "UTF-8"));
 
 		CsvParserSettings settings = new CsvParserSettings();
-		settings.setMaxColumns(2000);
+		settings.setMaxColumns(5000);
 		settings.setParseUnescapedQuotes(false);
 		settings.getFormat().setLineSeparator("\n");
 		settings.getFormat().setDelimiter(',');
@@ -86,6 +92,25 @@ public class WrongCaseViewer {
 				double secondMatchInTitle = Double.parseDouble(tokens[8]);
 				double midMatchInTitle = Double.parseDouble(tokens[9]);
 				double suffixMatchInTitle = Double.parseDouble(tokens[10]);
+				int qSize = Integer.parseInt(tokens[11]);
+				int titleSize = Integer.parseInt(tokens[12]);
+				int descSize = Integer.parseInt(tokens[13]);
+				double titleRatio = Double.parseDouble(tokens[14]);
+				double descRatio = Double.parseDouble(tokens[15]);
+				int prefixMatchIn1stTokenOfTitle = Integer.parseInt(tokens[16]);
+				int secondMatchIn2ndTokenOfTitle = Integer.parseInt(tokens[17]);
+				int suffixMatchInLastTokenOfTitle = Integer
+						.parseInt(tokens[18]);
+				int matchIn1stTokenOfTitle = Integer.parseInt(tokens[19]);
+				int matchIn2ndTokenOfTitle = Integer.parseInt(tokens[20]);
+				int matchInLastTokenOfTitle = Integer.parseInt(tokens[21]);
+				int compoundMatchInTitlePrefix = Integer.parseInt(tokens[22]);
+				int compoundMatchInTitleSuffix = Integer.parseInt(tokens[23]);
+				// double qBigramDistanceInTitle =
+				// Double.parseDouble(tokens[24]);
+				// double qBigramDistanceInDesc =
+				// Double.parseDouble(tokens[25]);
+
 				int medianRelevance = Integer
 						.parseInt(tokens[tokens.length - 6]);
 				int predict = Integer.parseInt(tokens[tokens.length - 5]);
@@ -105,6 +130,31 @@ public class WrongCaseViewer {
 				System.out.println("secondMatchInTitle:" + secondMatchInTitle);
 				System.out.println("midMatchInTitle:" + midMatchInTitle);
 				System.out.println("suffixMatchInTitle:" + suffixMatchInTitle);
+				System.out.println("qSize:" + qSize);
+				System.out.println("titleSize:" + titleSize);
+				System.out.println("descSize:" + descSize);
+				System.out.println("titleRatio:" + titleRatio);
+				System.out.println("descRatio:" + descRatio);
+				System.out.println("prefixMatchIn1stTokenOfTitle:"
+						+ prefixMatchIn1stTokenOfTitle);
+				System.out.println("secondMatchIn2ndTokenOfTitle:"
+						+ secondMatchIn2ndTokenOfTitle);
+				System.out.println("suffixMatchInLastTokenOfTitle:"
+						+ suffixMatchInLastTokenOfTitle);
+				System.out.println("matchIn1stTokenOfTitle:"
+						+ matchIn1stTokenOfTitle);
+				System.out.println("matchIn2ndTokenOfTitle:"
+						+ matchIn2ndTokenOfTitle);
+				System.out.println("matchInLastTokenOfTitle:"
+						+ matchInLastTokenOfTitle);
+				System.out.println("compoundMatchInTitlePrefix:"
+						+ compoundMatchInTitlePrefix);
+				System.out.println("compoundMatchInTitleSuffix:"
+						+ compoundMatchInTitleSuffix);
+				// System.out.println("qBigramDistanceInTitle:"
+				// + qBigramDistanceInTitle);
+				// System.out.println("qBigramDistanceInDesc:"
+				// + qBigramDistanceInDesc);
 				System.out.println("median_relevance:" + medianRelevance);
 				System.out.println("predict:" + predict);
 				System.out.println("P1:" + P1);
@@ -125,7 +175,7 @@ public class WrongCaseViewer {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[1];
-		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_rf_1563features_mtry=40_nodesize=1_ntree=500_kidsynonyms_20150524.csv";
+		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_xgb_4498features_d=60_20150605.csv";
 
 		WrongCaseViewer worker = new WrongCaseViewer();
 		worker.view(args[0]);
