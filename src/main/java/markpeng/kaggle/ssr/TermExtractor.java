@@ -1354,9 +1354,10 @@ public class TermExtractor {
 
 			for (String k : keywords.keySet()) {
 				if (testTitleTokens.contains(k)
-						&& !score2keywordsInTitle.get(query).containsKey(k)
-						&& !score3keywordsInTitle.get(query).containsKey(k)
-						&& !score4keywordsInTitle.get(query).containsKey(k)) {
+				// && !score2keywordsInTitle.get(query).containsKey(k)
+				// && !score3keywordsInTitle.get(query).containsKey(k)
+				// && !score4keywordsInTitle.get(query).containsKey(k)
+				) {
 					// if (score1keywordsInTitle.get(query).get(k) >= 2)
 					if (k.length() > 1) {
 						uniqueScore1keywordsInTitle.get(query).put(k,
@@ -1380,9 +1381,10 @@ public class TermExtractor {
 
 			for (String k : keywords.keySet()) {
 				if (testTitleTokens.contains(k)
-						&& !score1keywordsInTitle.get(query).containsKey(k)
-						&& !score3keywordsInTitle.get(query).containsKey(k)
-						&& !score4keywordsInTitle.get(query).containsKey(k)) {
+				// && !score1keywordsInTitle.get(query).containsKey(k)
+				// && !score3keywordsInTitle.get(query).containsKey(k)
+				// && !score4keywordsInTitle.get(query).containsKey(k)
+				) {
 					// if (score1keywordsInTitle.get(query).get(k) >= 2)
 					if (k.length() > 1) {
 						uniqueScore2keywordsInTitle.get(query).put(k,
@@ -1406,9 +1408,10 @@ public class TermExtractor {
 
 			for (String k : keywords.keySet()) {
 				if (testTitleTokens.contains(k)
-						&& !score1keywordsInTitle.get(query).containsKey(k)
-						&& !score2keywordsInTitle.get(query).containsKey(k)
-						&& !score4keywordsInTitle.get(query).containsKey(k)) {
+				// && !score1keywordsInTitle.get(query).containsKey(k)
+				// && !score2keywordsInTitle.get(query).containsKey(k)
+				// && !score4keywordsInTitle.get(query).containsKey(k)
+				) {
 					// if (score1keywordsInTitle.get(query).get(k) >= 2)
 					if (k.length() > 1) {
 						uniqueScore3keywordsInTitle.get(query).put(k,
@@ -1432,9 +1435,10 @@ public class TermExtractor {
 
 			for (String k : keywords.keySet()) {
 				if (testTitleTokens.contains(k)
-						&& !score1keywordsInTitle.get(query).containsKey(k)
-						&& !score2keywordsInTitle.get(query).containsKey(k)
-						&& !score3keywordsInTitle.get(query).containsKey(k)) {
+				// && !score1keywordsInTitle.get(query).containsKey(k)
+				// && !score2keywordsInTitle.get(query).containsKey(k)
+				// && !score3keywordsInTitle.get(query).containsKey(k)
+				) {
 					// if (score1keywordsInTitle.get(query).get(k) >= 2)
 					if (k.length() > 1) {
 						uniqueScore4keywordsInTitle.get(query).put(k,
@@ -1766,6 +1770,10 @@ public class TermExtractor {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[5];
+		// args[0] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
+		// args[1] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_newfeature_markpeng_20150530.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_newfeature_markpeng_20150530.csv";
 		// args[0] =
@@ -1804,10 +1812,14 @@ public class TermExtractor {
 		// worker.extractSmallerWordsBaseOnQuery(trainFile, testFile,
 		// outputTrain,
 		// outputTest);
+		// worker.extractKeywordFromTitleAndDescriptionByScore(
+		// trainFile,
+		// testFile,
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_20150602.txt");
 		worker.extractKeywordFromTitleAndDescriptionByScore(
 				trainFile,
 				testFile,
-				"/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_20150602.txt");
+				"/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_noexclude_20150606.txt");
 
 	}
 }

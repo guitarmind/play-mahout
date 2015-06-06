@@ -52,7 +52,7 @@ public class WrongCaseViewer {
 		System.setOut(new PrintStream(
 				new BufferedOutputStream(
 						new FileOutputStream(
-								"/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_case_xgb_4498features_d=60_20150605.txt")),
+								"/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_case_xgb_294features_d=16_20150606.txt")),
 				true));
 
 		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
@@ -106,10 +106,10 @@ public class WrongCaseViewer {
 				int matchInLastTokenOfTitle = Integer.parseInt(tokens[21]);
 				int compoundMatchInTitlePrefix = Integer.parseInt(tokens[22]);
 				int compoundMatchInTitleSuffix = Integer.parseInt(tokens[23]);
-				// double qBigramDistanceInTitle =
-				// Double.parseDouble(tokens[24]);
-				// double qBigramDistanceInDesc =
-				// Double.parseDouble(tokens[25]);
+				double qBigramDistanceInTitle = Double.parseDouble(tokens[24]);
+				double qBigramDistanceInDesc = Double.parseDouble(tokens[25]);
+				int bigramMatchInTitle = Integer.parseInt(tokens[26]);
+				int bigramMatchInDesc = Integer.parseInt(tokens[27]);
 
 				int medianRelevance = Integer
 						.parseInt(tokens[tokens.length - 6]);
@@ -151,10 +151,12 @@ public class WrongCaseViewer {
 						+ compoundMatchInTitlePrefix);
 				System.out.println("compoundMatchInTitleSuffix:"
 						+ compoundMatchInTitleSuffix);
-				// System.out.println("qBigramDistanceInTitle:"
-				// + qBigramDistanceInTitle);
-				// System.out.println("qBigramDistanceInDesc:"
-				// + qBigramDistanceInDesc);
+				System.out.println("qBigramDistanceInTitle:"
+						+ qBigramDistanceInTitle);
+				System.out.println("qBigramDistanceInDesc:"
+						+ qBigramDistanceInDesc);
+				System.out.println("bigramMatchInTitle:" + bigramMatchInTitle);
+				System.out.println("bigramMatchInDesc:" + bigramMatchInDesc);
 				System.out.println("median_relevance:" + medianRelevance);
 				System.out.println("predict:" + predict);
 				System.out.println("P1:" + P1);
@@ -175,7 +177,7 @@ public class WrongCaseViewer {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[1];
-		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_xgb_4498features_d=60_20150605.csv";
+		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/wrong_local_test_xgb_294features_d=16_20150606.csv";
 
 		WrongCaseViewer worker = new WrongCaseViewer();
 		worker.view(args[0]);
