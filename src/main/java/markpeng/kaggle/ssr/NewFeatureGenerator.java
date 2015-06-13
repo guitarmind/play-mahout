@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopFilter;
@@ -39,6 +41,8 @@ public class NewFeatureGenerator {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
+
+	private DecimalFormat fomatter = new DecimalFormat("#.####");
 
 	private static final double MIN_SIMILARITY = 0.75;
 
@@ -821,6 +825,301 @@ public class NewFeatureGenerator {
 		System.out.flush();
 	}
 
+	public void generateTopicFeatures(String trainFile, String testFile,
+			String outputTrain, String outputTest, String compoundPath,
+			String smallWordPath, String bigramTopicFromQPath,
+			String bigramTopicFromTitlePath) throws Exception {
+
+		List<String> compounds = readFile(compoundPath);
+		List<String> smallWords = readFile(smallWordPath);
+
+		List<String> bigramTopicFromQ = new ArrayList<String>();
+		List<String> tmpList = readFile(bigramTopicFromQPath);
+		for (String tmp : tmpList) {
+			// stemming
+			tmp = processTextByLuceneWithPorter(tmp);
+			if (!bigramTopicFromQ.contains(tmp))
+				bigramTopicFromQ.add(tmp);
+		}
+		List<String> bigramTopicFromTitle = new ArrayList<String>();
+		tmpList.clear();
+		tmpList = readFile(bigramTopicFromTitlePath);
+		for (String tmp : tmpList) {
+			tmp = tmp.substring(0, tmp.indexOf("(")).trim();
+			// stemming
+			tmp = processTextByLuceneWithPorter(tmp);
+			if (!bigramTopicFromTitle.contains(tmp))
+				bigramTopicFromTitle.add(tmp);
+		}
+
+		StringBuffer resultStr = new StringBuffer();
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		BufferedReader testIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(testFile), "UTF-8"));
+
+		BufferedWriter trainOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputTrain, false), "UTF-8"));
+
+		BufferedWriter testOut = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputTest, false), "UTF-8"));
+
+		CsvParserSettings settings = new CsvParserSettings();
+		settings.setParseUnescapedQuotes(false);
+		settings.getFormat().setLineSeparator("\n");
+		settings.getFormat().setDelimiter(',');
+		settings.getFormat().setQuote('"');
+		settings.setHeaderExtractionEnabled(true);
+		settings.setEmptyValue("");
+		settings.setMaxCharsPerColumn(40960);
+
+		// -------------------------------------------------------------------------------------------
+		// Train Data
+
+		// create headers
+		resultStr.append("\"id\",");
+		for (String w : bigramTopicFromQ) {
+			String name = "TQinTD_" + w.replace(" ", "_");
+			resultStr.append("\"" + name + "\",");
+		}
+		int index = 0;
+		for (String w : bigramTopicFromTitle) {
+			String name = "TTinTD_" + w.replace(" ", "_");
+			if (index != bigramTopicFromTitle.size() - 1)
+				resultStr.append("\"" + name + "\",");
+			else
+				resultStr.append("\"" + name + "\"");
+			index++;
+		}
+		resultStr.append(newLine);
+
+		try {
+			// creates a CSV parser
+			CsvParser trainParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			trainParser.beginParsing(trainIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = trainParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+				int medianRelevance = Integer.parseInt(tokens[4]);
+				double relevance_variance = Double.parseDouble(tokens[5]);
+
+				// missing description: use title
+				if (productDesc.length() < 3)
+					productDesc = productTitle;
+
+				// preprocessing
+				String cleanQuery = processTextByLuceneWithKStem(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLuceneWithKStem(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLuceneWithKStem(getTextFromRawData(productDesc));
+
+				// replace compounds
+				for (String c : compounds) {
+					String tmp = c.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, c);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, c);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, c);
+				}
+				// replace small words generated from title
+				for (String s : smallWords) {
+					String tmp = s.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, s);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, s);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, s);
+				}
+
+				// replace all synonyms
+				cleanQuery = replaceSynonyms(cleanQuery);
+				cleanProductTitle = replaceSynonyms(cleanProductTitle);
+				cleanProductDesc = replaceSynonyms(cleanProductDesc);
+
+				// use porter stemming afterwards
+				cleanQuery = processTextByLuceneWithPorter(cleanQuery);
+				cleanProductTitle = processTextByLuceneWithPorter(cleanProductTitle);
+				cleanProductDesc = processTextByLuceneWithPorter(cleanProductDesc);
+
+				String combinedTitleDesc = cleanProductTitle + " "
+						+ cleanProductDesc;
+
+				resultStr.append(id + ",");
+				// ----------------------------------------------------------------------------------------------------------------------------------------
+				// TF = log(TF + 1) as Features
+				for (String w : bigramTopicFromQ) {
+					int tf = StringUtils.countMatches(combinedTitleDesc, w);
+					double normTF = Math.log(tf + 1);
+					String feature = fomatter.format(normTF);
+					resultStr.append(feature + ",");
+				}
+				int c = 0;
+				for (String w : bigramTopicFromTitle) {
+					int tf = StringUtils.countMatches(combinedTitleDesc, w);
+					double normTF = Math.log(tf + 1);
+					String feature = fomatter.format(normTF);
+					if (c != bigramTopicFromTitle.size() - 1)
+						resultStr.append(feature + ",");
+					else
+						resultStr.append(feature);
+					c++;
+				}
+				resultStr.append(newLine);
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					trainOut.write(resultStr.toString());
+					trainOut.flush();
+					resultStr.setLength(0);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total train records: " + count);
+		} finally {
+			trainIn.close();
+
+			trainOut.write(resultStr.toString());
+			trainOut.flush();
+			trainOut.close();
+			resultStr.setLength(0);
+		}
+
+		// -------------------------------------------------------------------------------------------
+		// Test Data
+
+		resultStr.setLength(0);
+		// create headers
+		resultStr.append("\"id\",");
+		for (String w : bigramTopicFromQ) {
+			String name = "TQinTD_" + w.replace(" ", "_");
+			resultStr.append("\"" + name + "\",");
+		}
+		index = 0;
+		for (String w : bigramTopicFromTitle) {
+			String name = "TTinTD_" + w.replace(" ", "_");
+			if (index != bigramTopicFromTitle.size() - 1)
+				resultStr.append("\"" + name + "\",");
+			else
+				resultStr.append("\"" + name + "\"");
+			index++;
+		}
+		resultStr.append(newLine);
+
+		try {
+			// creates a CSV parser
+			CsvParser testParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			testParser.beginParsing(testIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = testParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+
+				// missing description: use title
+				if (productDesc.length() < 3)
+					productDesc = productTitle;
+
+				// preprocessing
+				String cleanQuery = processTextByLuceneWithKStem(getTextFromRawData(query));
+				String cleanProductTitle = processTextByLuceneWithKStem(getTextFromRawData(productTitle));
+				String cleanProductDesc = processTextByLuceneWithKStem(getTextFromRawData(productDesc));
+
+				// replace compounds
+				for (String c : compounds) {
+					String tmp = c.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, c);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, c);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, c);
+				}
+				// replace small words generated from title
+				for (String s : smallWords) {
+					String tmp = s.replace(" ", "");
+					if (cleanQuery.contains(tmp))
+						cleanQuery = cleanQuery.replace(tmp, s);
+					if (cleanProductTitle.contains(tmp))
+						cleanProductTitle = cleanProductTitle.replace(tmp, s);
+					if (cleanProductDesc.contains(tmp))
+						cleanProductDesc = cleanProductDesc.replace(tmp, s);
+				}
+
+				// replace all synonyms
+				cleanQuery = replaceSynonyms(cleanQuery);
+				cleanProductTitle = replaceSynonyms(cleanProductTitle);
+				cleanProductDesc = replaceSynonyms(cleanProductDesc);
+
+				// use porter stemming afterwards
+				cleanQuery = processTextByLuceneWithPorter(cleanQuery);
+				cleanProductTitle = processTextByLuceneWithPorter(cleanProductTitle);
+				cleanProductDesc = processTextByLuceneWithPorter(cleanProductDesc);
+
+				String combinedTitleDesc = cleanProductTitle + " "
+						+ cleanProductDesc;
+
+				resultStr.append(id + ",");
+				// ----------------------------------------------------------------------------------------------------------------------------------------
+				// TF = log(TF + 1) as Features
+				for (String w : bigramTopicFromQ) {
+					int tf = StringUtils.countMatches(combinedTitleDesc, w);
+					double normTF = Math.log(tf + 1);
+					String feature = fomatter.format(normTF);
+					resultStr.append(feature + ",");
+				}
+				int c = 0;
+				for (String w : bigramTopicFromTitle) {
+					int tf = StringUtils.countMatches(combinedTitleDesc, w);
+					double normTF = Math.log(tf + 1);
+					String feature = fomatter.format(normTF);
+					if (c != bigramTopicFromTitle.size() - 1)
+						resultStr.append(feature + ",");
+					else
+						resultStr.append(feature);
+					c++;
+				}
+				resultStr.append(newLine);
+
+				if (resultStr.length() >= BUFFER_LENGTH) {
+					testOut.write(resultStr.toString());
+					testOut.flush();
+					resultStr.setLength(0);
+				}
+
+				count++;
+			}
+
+			System.out.println("Total test records: " + count);
+
+		} finally {
+			testIn.close();
+
+			testOut.write(resultStr.toString());
+			testOut.flush();
+			testOut.close();
+			resultStr.setLength(0);
+		}
+
+		System.out.flush();
+	}
+
 	public String getTextFromRawData(String raw) {
 		String result = raw;
 
@@ -1187,8 +1486,12 @@ public class NewFeatureGenerator {
 		args = new String[6];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_bigramTopic_markpeng_20150613.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_bigramTopic_markpeng_20150613.csv";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
+		// args[3] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng.csv";
 		// args[3] =
@@ -1212,8 +1515,18 @@ public class NewFeatureGenerator {
 		String smallWordPath = args[5];
 
 		NewFeatureGenerator worker = new NewFeatureGenerator();
-		worker.generate(trainFile, testFile, outputTrain, outputTest,
-				compoundPath, smallWordPath);
+		// worker.generate(trainFile, testFile, outputTrain, outputTest,
+		// compoundPath, smallWordPath);
+
+		worker.generateTopicFeatures(
+				trainFile,
+				testFile,
+				outputTrain,
+				outputTest,
+				compoundPath,
+				smallWordPath,
+				"/home/markpeng/Share/Kaggle/Search Results Relevance/bigram_topic_words_in_query_20150518.txt",
+				"/home/markpeng/Share/Kaggle/Search Results Relevance/bigram_topic_words_in_title_DF=2_20150519.txt");
 
 		// String query = "high heel shoe";
 		// String text =
