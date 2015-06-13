@@ -1,5 +1,6 @@
 package markpeng.kaggle.ssr;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
@@ -7,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -865,6 +867,57 @@ public class TermExtractor {
 			System.out.println(q + ": " + queryInTest.get(q));
 		}
 		System.out.println("\n\nCounf of all query: " + allQuery.size());
+
+		System.out.flush();
+	}
+
+	public void extractDistinctQuery(String trainFile) throws Exception {
+		TreeSet<String> allQuery = new TreeSet<String>();
+
+		System.setOut(new PrintStream(
+				new BufferedOutputStream(
+						new FileOutputStream(
+								"/home/markpeng/Share/Kaggle/Search Results Relevance/dintinct_query_origin_20150613.txt")),
+				true));
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		CsvParserSettings settings = new CsvParserSettings();
+		settings.setParseUnescapedQuotes(false);
+		settings.getFormat().setLineSeparator("\n");
+		settings.getFormat().setDelimiter(',');
+		settings.getFormat().setQuote('"');
+		settings.setHeaderExtractionEnabled(true);
+		settings.setEmptyValue("");
+		settings.setMaxCharsPerColumn(40960);
+
+		// -------------------------------------------------------------------------------------------
+		// Train Data
+
+		try {
+
+			// creates a CSV parser
+			CsvParser trainParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			trainParser.beginParsing(trainIn);
+
+			String[] tokens;
+			while ((tokens = trainParser.parseNext()) != null) {
+				String query = tokens[1].replace("\"", "").trim();
+
+				if (!allQuery.contains(query))
+					allQuery.add(query);
+			}
+
+		} finally {
+			trainIn.close();
+		}
+
+		for (String q : allQuery) {
+			System.out.println(q);
+		}
 
 		System.out.flush();
 	}
@@ -1816,10 +1869,11 @@ public class TermExtractor {
 		// trainFile,
 		// testFile,
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_20150602.txt");
-		worker.extractKeywordFromTitleAndDescriptionByScore(
-				trainFile,
-				testFile,
-				"/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_noexclude_20150606.txt");
-
+		// worker.extractKeywordFromTitleAndDescriptionByScore(
+		// trainFile,
+		// testFile,
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_noexclude_20150606.txt");
+		// worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv");
+		worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred.csv");
 	}
 }
