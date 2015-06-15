@@ -111,6 +111,22 @@ public class DatasetCleaner {
 		return features;
 	}
 
+	public String replaceTypo(String text) {
+		String result = text.toLowerCase();
+
+		if (result.contains("extenal"))
+			result = result.replace("extenal", "external");
+
+		if (result.contains("adida"))
+			result = result.replace("adida", "adidas");
+
+		// if (result.contains(""))
+		// result = result.replace("", "");
+
+		return result;
+
+	}
+
 	public String replaceSynonyms(String text) {
 		String result = text.toLowerCase();
 
@@ -185,6 +201,14 @@ public class DatasetCleaner {
 			result = result.replace("children", "child");
 		if (result.contains("kid"))
 			result = result.replace("kid", "child");
+
+		if (result.contains("boots"))
+			result = result.replace("boots", "shoe");
+		if (result.contains("boot"))
+			result = result.replace("boot", "shoe");
+
+		if (result.contains("extenal"))
+			result = result.replace("extenal", "external");
 
 		// if (result.contains(""))
 		// result = result.replace("", "");
@@ -262,6 +286,11 @@ public class DatasetCleaner {
 						cleanProductDesc = cleanProductDesc.replace(tmp, c);
 				}
 
+				// replace typos
+				cleanQuery = replaceTypo(cleanQuery);
+				cleanProductTitle = replaceTypo(cleanProductTitle);
+				cleanProductDesc = replaceTypo(cleanProductDesc);
+
 				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
 						+ cleanProductTitle + "\",\"" + cleanProductDesc
 						+ "\",\"" + medianRelevance + "\",\""
@@ -327,6 +356,11 @@ public class DatasetCleaner {
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, c);
 				}
+
+				// replace typos
+				cleanQuery = replaceTypo(cleanQuery);
+				cleanProductTitle = replaceTypo(cleanProductTitle);
+				cleanProductDesc = replaceTypo(cleanProductDesc);
 
 				resultStr
 						.append("\"" + id + "\",\"" + cleanQuery + "\",\""
@@ -451,16 +485,16 @@ public class DatasetCleaner {
 					if (cleanProductDesc.contains(tmp))
 						cleanProductDesc = cleanProductDesc.replace(tmp, c);
 				}
-				// replace small words generated from title
-				for (String s : smallWords) {
-					String tmp = s.replace(" ", "");
-					if (cleanQuery.contains(tmp))
-						cleanQuery = cleanQuery.replace(tmp, s);
-					if (cleanProductTitle.contains(tmp))
-						cleanProductTitle = cleanProductTitle.replace(tmp, s);
-					if (cleanProductDesc.contains(tmp))
-						cleanProductDesc = cleanProductDesc.replace(tmp, s);
-				}
+				// replace small words generated from title (disavble for crawl)
+				// for (String s : smallWords) {
+				// String tmp = s.replace(" ", "");
+				// if (cleanQuery.contains(tmp))
+				// cleanQuery = cleanQuery.replace(tmp, s);
+				// if (cleanProductTitle.contains(tmp))
+				// cleanProductTitle = cleanProductTitle.replace(tmp, s);
+				// if (cleanProductDesc.contains(tmp))
+				// cleanProductDesc = cleanProductDesc.replace(tmp, s);
+				// }
 				// replace all synonyms
 				cleanQuery = replaceSynonyms(cleanQuery);
 				cleanProductTitle = replaceSynonyms(cleanProductTitle);
@@ -639,6 +673,11 @@ public class DatasetCleaner {
 				if (titleTokens.containsKey(suffixQ))
 					suffixMatchInTitle = 1;
 
+				// replace typos
+				cleanQuery = replaceTypo(cleanQuery);
+				cleanProductTitle = replaceTypo(cleanProductTitle);
+				cleanProductDesc = replaceTypo(cleanProductDesc);
+
 				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
 						+ cleanProductTitle + "\",\"" + cleanProductDesc
 						+ "\",\"" + medianRelevance + "\",\""
@@ -802,6 +841,11 @@ public class DatasetCleaner {
 				String suffixQ = qTmp[qTmp.length - 1];
 				if (titleTokens.containsKey(suffixQ))
 					suffixMatchInTitle = 1;
+
+				// replace typos
+				cleanQuery = replaceTypo(cleanQuery);
+				cleanProductTitle = replaceTypo(cleanProductTitle);
+				cleanProductDesc = replaceTypo(cleanProductDesc);
 
 				resultStr.append("\"" + id + "\",\"" + cleanQuery + "\",\""
 						+ cleanProductTitle + "\",\"" + cleanProductDesc
@@ -1444,8 +1488,8 @@ public class DatasetCleaner {
 		args = new String[6];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_markpeng.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_crawl_markpeng_20150615.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_crawl_markpeng_20150615.csv";
 		// args[2] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_markpeng.csv";
 		// args[3] =
@@ -1473,6 +1517,7 @@ public class DatasetCleaner {
 				compoundPath, smallWordPath);
 		// worker.clean(trainFile, testFile, outputTrain, outputTest,
 		// compoundPath);
+
 		// worker.run(trainFile, testFile, outputTrain, outputTest,
 		// compoundPath,
 		// smallWordPath);

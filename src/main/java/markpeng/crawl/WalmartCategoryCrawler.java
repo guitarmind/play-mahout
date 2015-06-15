@@ -94,22 +94,23 @@ public class WalmartCategoryCrawler {
 		apiKeys.add("bjaf45tux25jk3h9at845nc6");
 		apiKeys.add("tmbq2u6u4pvecgxcbqkacwk7");
 
-		String queryFilePath = "/home/markpeng/Share/Kaggle/Search Results Relevance/dintinct_query_20150613.txt";
+		String queryFilePath = "/home/markpeng/Share/Kaggle/Search Results Relevance/dintinct_query_origin_20150613.txt";
 
 		List<String> queryList = new ArrayList<String>();
 		// queryList.add("neck pillow");
 		// queryList.add("blue mini refrigerator");
-		BufferedReader in = new BufferedReader(new InputStreamReader(
-				new FileInputStream(queryFilePath), "UTF-8"));
-		try {
-			String aLine = null;
-			while ((aLine = in.readLine()) != null) {
-				String tmp = aLine.toLowerCase().trim();
-				queryList.add(tmp);
-			}
-		} finally {
-			in.close();
-		}
+		queryList.add("van back pack");
+		// BufferedReader in = new BufferedReader(new InputStreamReader(
+		// new FileInputStream(queryFilePath), "UTF-8"));
+		// try {
+		// String aLine = null;
+		// while ((aLine = in.readLine()) != null) {
+		// String tmp = aLine.toLowerCase().trim();
+		// queryList.add(tmp);
+		// }
+		// } finally {
+		// in.close();
+		// }
 
 		WalmartCategoryCrawler worker = new WalmartCategoryCrawler(apiKeys);
 		worker.fetchQueryCategory(

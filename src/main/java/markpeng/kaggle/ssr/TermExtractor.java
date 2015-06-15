@@ -1874,6 +1874,6 @@ public class TermExtractor {
 		// testFile,
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_noexclude_20150606.txt");
 		// worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv");
-		worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred.csv");
+		worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_crawl_markpeng_20150615.csv");
 	}
 }

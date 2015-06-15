@@ -188,6 +188,9 @@ public class NewFeatureGenerator {
 		if (result.contains("boot"))
 			result = result.replace("boot", "shoe");
 
+		if (result.contains("extenal"))
+			result = result.replace("extenal", "external");
+
 		// if (result.contains(""))
 		// result = result.replace("", "");
 
