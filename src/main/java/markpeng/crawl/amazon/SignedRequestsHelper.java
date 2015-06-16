@@ -22,12 +22,16 @@ package markpeng.crawl.amazon;
  */
 
 import java.io.UnsupportedEncodingException;
+
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;

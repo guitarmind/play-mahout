@@ -120,10 +120,10 @@ public class WalmartCategoryParser {
 				System.out.println("Most-matched category for " + jsonFile
 						+ ": " + mostMatchedCategories.get(0).getKey());
 			} else {
-				// System.out.println("Majority category for " + jsonFile + ": "
-				// + categories.get(0).getKey());
-				// outputCategory[1] = categories.get(0).getKey();
-				outputCategory[1] = "Unknown";
+				System.out.println("Majority category for " + jsonFile + ": "
+						+ categories.get(0).getKey());
+				outputCategory[1] = categories.get(0).getKey();
+				// outputCategory[1] = "Unknown";
 			}
 
 		} else {
@@ -445,9 +445,9 @@ public class WalmartCategoryParser {
 
 		String folderPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/walmart/query";
 		String compoundPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/english-compound-words.txt";
-		String outputFile = "/../query_walmart_categories_mostMatched_20150615.txt";
 		// String outputFile =
-		// "/../query_walmart_categories_mostMatched_magority_20150615.txt";
+		// "/../query_walmart_categories_mostMatched_20150616.txt";
+		String outputFile = "/../query_walmart_categories_mostMatched_majority_20150616.txt";
 
 		final File folder = new File(folderPath);
 

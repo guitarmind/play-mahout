@@ -64,7 +64,8 @@ public class ItemLookupSample {
 	 * locale of your choice.
 	 */
 	private static final String ITEM_ID = "B00426VF1Q";
-	private static final String ASSOCIATETAG = "n018b7-20";
+	// private static final String ASSOCIATETAG = "n018b7-20";
+	private static final String ASSOCIATETAG = "test09d0-20";
 
 	public static void main(String[] args) {
 		/*
@@ -100,21 +101,16 @@ public class ItemLookupSample {
 		params.put("Service", "AWSECommerceService");
 		params.put("Version", "2009-03-31");
 		params.put("Operation", "ItemSearch");
-		params.put("Keywords", "hollister polo");
-		// params.put("SearchIndex", "Toys");
+		params.put("Keywords", "Rocket");
+		params.put("SearchIndex", "Toys");
 		params.put("AssociateTag", ASSOCIATETAG);
-		params.put("ItemPage", "1");
-		// params.put("ItemPage", "5");
+		params.put("ItemPage", "5");
 
 		requestUrl = helper.sign(params);
 		System.out.println("Signed Request is \"" + requestUrl + "\"");
 
-		// title = fetchTitle(requestUrl);
-		// System.out.println("Signed Title is \"" + title + "\"");
-		// System.out.println();
-
-		title = fetchFieldValue(requestUrl, "ProductGroup");
-		System.out.println("Signed ProductGroup is \"" + title + "\"");
+		title = fetchTitle(requestUrl);
+		System.out.println("Signed Title is \"" + title + "\"");
 		System.out.println();
 
 		/*
