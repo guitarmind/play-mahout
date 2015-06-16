@@ -71,8 +71,20 @@ public class WalmartCategoryCrawler {
 			if (!fetched.contains(title)) {
 				System.out.println("Querying " + title + " ......");
 
-				String json = getJsonFromAPI(title);
-				JsonElement jelement = new JsonParser().parse(json);
+				int retryTimes = 0;
+				String json = "";
+				JsonElement jelement = null;
+				while (retryTimes <= 3) {
+					json = getJsonFromAPI(title);
+					try {
+						jelement = new JsonParser().parse(json);
+						break;
+					} catch (Exception e) {
+						e.printStackTrace();
+						retryTimes++;
+					}
+				}
+
 				JsonObject jobject = jelement.getAsJsonObject();
 
 				if (jobject.has("items")) {
@@ -81,8 +93,10 @@ public class WalmartCategoryCrawler {
 						final JsonObject item = e.getAsJsonObject();
 						String itemId = item.get("itemId").getAsString();
 						String name = item.get("name").getAsString();
-						String categoryPath = item.get("categoryPath")
-								.getAsString();
+						String categoryPath = "Unknown";
+						if (item.has("categoryPath"))
+							categoryPath = item.get("categoryPath")
+									.getAsString();
 
 						System.out.println("itemId: " + itemId);
 						System.out.println("name: " + name);

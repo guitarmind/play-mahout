@@ -1589,6 +1589,95 @@ public class TermExtractor {
 		System.out.flush();
 	}
 
+	public static void combineAllTitleAndDesc(String trainFile,
+			String testFile, String outputFilePath) throws Exception {
+		StringBuffer output = new StringBuffer();
+
+		BufferedReader trainIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(trainFile), "UTF-8"));
+
+		BufferedReader testIn = new BufferedReader(new InputStreamReader(
+				new FileInputStream(testFile), "UTF-8"));
+
+		CsvParserSettings settings = new CsvParserSettings();
+		settings.setParseUnescapedQuotes(false);
+		settings.getFormat().setLineSeparator("\n");
+		settings.getFormat().setDelimiter(',');
+		settings.getFormat().setQuote('"');
+		settings.setHeaderExtractionEnabled(true);
+		settings.setEmptyValue("");
+		settings.setMaxCharsPerColumn(40960);
+
+		// -------------------------------------------------------------------------------------------
+		// Train Data
+
+		try {
+			// creates a CSV parser
+			CsvParser trainParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			trainParser.beginParsing(trainIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = trainParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+				int medianRelevance = Integer.parseInt(tokens[4]);
+				double relevance_variance = Double.parseDouble(tokens[5]);
+
+				output.append(productTitle + " " + productDesc + " ");
+
+				count++;
+			}
+
+			System.out.println("Total train records: " + count);
+		} finally {
+			trainIn.close();
+		}
+
+		// -------------------------------------------------------------------------------------------
+		// Test Data
+
+		try {
+			// creates a CSV parser
+			CsvParser testParser = new CsvParser(settings);
+
+			// call beginParsing to read records one by one, iterator-style.
+			testParser.beginParsing(testIn);
+
+			int count = 0;
+			String[] tokens;
+			while ((tokens = testParser.parseNext()) != null) {
+				String id = tokens[0];
+				String query = tokens[1].replace("\"", "").trim();
+				String productTitle = tokens[2].replace("\"", "").trim();
+				String productDesc = tokens[3].replace("\"", "").trim();
+
+				output.append(productTitle + " " + productDesc + " ");
+
+				count++;
+			}
+
+			System.out.println("Total test records: " + count);
+
+		} finally {
+			testIn.close();
+		}
+
+		// write to file
+		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
+				new FileOutputStream(outputFilePath, false), "UTF-8"));
+		try {
+			out.write(output.toString().trim());
+		} finally {
+			out.flush();
+			out.close();
+		}
+	}
+
 	public String getTextFromRawData(String raw) {
 		String result = raw;
 
@@ -1823,12 +1912,12 @@ public class TermExtractor {
 
 	public static void main(String[] args) throws Exception {
 		args = new String[5];
+		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
+		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
 		// args[0] =
-		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_newfeature_markpeng_20150530.csv";
 		// args[1] =
-		// "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
-		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_newfeature_markpeng_20150530.csv";
-		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_newfeature_markpeng_20150530.csv";
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_stem_compound_newfeature_markpeng_20150530.csv";
 		// args[0] =
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train.csv";
 		// args[1] =
@@ -1874,6 +1963,10 @@ public class TermExtractor {
 		// testFile,
 		// "/home/markpeng/Share/Kaggle/Search Results Relevance/unique_score_keywords_noexclude_20150606.txt");
 		// worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_stem_compound_markpeng.csv");
-		worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_crawl_markpeng_20150615.csv");
+		// worker.extractDistinctQuery("/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_crawl_markpeng_20150615.csv");
+
+		String outputFilePath = "/home/markpeng/Share/Kaggle/Search Results Relevance/ssr_title_desc_20150616.txt";
+		worker.combineAllTitleAndDesc(trainFile, testFile, outputFilePath);
+
 	}
 }
