@@ -74,20 +74,26 @@ public class WalmartCategoryCrawler {
 				int retryTimes = 0;
 				String json = "";
 				JsonElement jelement = null;
+				JsonObject jobject = null;
 				while (retryTimes <= 3) {
 					json = getJsonFromAPI(title);
 					try {
 						jelement = new JsonParser().parse(json);
+						jobject = jelement.getAsJsonObject();
+						if (jobject == null) {
+							System.out.println("Server response: " + json);
+							throw new Exception();
+						}
 						break;
 					} catch (Exception e) {
 						e.printStackTrace();
 						retryTimes++;
+						System.out
+								.println("Retry " + retryTimes + " times ...");
 					}
 				}
 
-				JsonObject jobject = jelement.getAsJsonObject();
-
-				if (jobject.has("items")) {
+				if (jobject != null && jobject.has("items")) {
 					JsonArray itemArray = jobject.getAsJsonArray("items");
 					for (final JsonElement e : itemArray) {
 						final JsonObject item = e.getAsJsonObject();
