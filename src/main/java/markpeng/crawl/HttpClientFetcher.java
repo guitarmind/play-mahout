@@ -9,6 +9,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -77,7 +78,12 @@ public class HttpClientFetcher {
 						"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36");
 
 		try {
-			logger.info(responseGet.getStatusLine().toString());
+			StatusLine status = responseGet.getStatusLine();
+			logger.info(status.toString());
+
+			if (status.getStatusCode() != 200)
+				throw new Exception("Bad status code: "
+						+ status.getStatusCode());
 
 			HttpEntity entity = responseGet.getEntity();
 			if (entity != null) {
