@@ -3,6 +3,7 @@ package markpeng.deep.learning;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 import java.util.TreeMap;
 
 public class GloVeParser {
@@ -38,6 +39,28 @@ public class GloVeParser {
 		return gloveVectors;
 	}
 
+	public double[] getAverageVector(String text,
+			TreeMap<String, double[]> gloveVectors, int vectorSize) {
+		double[] avgVector = new double[vectorSize];
+
+		String[] tokens = text.split("\\s");
+		int vectCount = 0;
+		for (String token : tokens) {
+			if (gloveVectors.containsKey(token)) {
+				double[] vect = gloveVectors.get(token);
+				for (int i = 0; i < vectorSize; i++)
+					avgVector[i] += vect[i];
+
+				vectCount++;
+			}
+		}
+
+		for (int i = 0; i < vectorSize; i++)
+			avgVector[i] = (double) avgVector[i] / vectCount;
+
+		return avgVector;
+	}
+
 	public double vectorSimilarity(String target1, String target2,
 			TreeMap<String, double[]> gloveVectors) {
 		double score = 0.0;
@@ -53,6 +76,19 @@ public class GloVeParser {
 		double dist = 0.0;
 		double[] vector1 = gloveVectors.get(target1);
 		double[] vector2 = gloveVectors.get(target2);
+
+		// Euclidean distance
+		double sum = 0.0;
+		for (int i = 0; i < vector1.length; i++)
+			sum += Math.pow(vector1[i] - vector2[i], 2);
+
+		dist = Math.sqrt(sum);
+
+		return dist;
+	}
+
+	public double vectorDistance(double[] vector1, double[] vector2) {
+		double dist = 0.0;
 
 		// Euclidean distance
 		double sum = 0.0;
