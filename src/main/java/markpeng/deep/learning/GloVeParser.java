@@ -112,7 +112,7 @@ public class GloVeParser {
 		// String target1 = "tv";
 		// String target2 = "video";
 		// String target3 = "bag";
-		String target1 = "ps";
+		String target1 = "daisylan";
 		String target2 = "video";
 		String target3 = "dress";
 		// double score = parser.vectorSimilarity(target1, target2,

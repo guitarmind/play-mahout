@@ -191,20 +191,35 @@ public class GloVeFeatureGenerator {
 				double[] queryVector = parser.getAverageVector(query,
 						gloveVectors, vectorSize);
 				for (int i = 0; i < vectorSize; i++) {
-					resultStr.append("\"" + fomatter.format(queryVector[i])
-							+ "\",");
+					if (Double.isInfinite(queryVector[i])
+							|| Double.isNaN(queryVector[i]))
+						resultStr.append("\"0\",");
+					else
+						resultStr.append("\"" + fomatter.format(queryVector[i])
+								+ "\",");
 				}
 				// title
 				double[] titleVector = parser.getAverageVector(productTitle,
 						gloveVectors, vectorSize);
 				for (int i = 0; i < vectorSize; i++) {
-					resultStr.append("\"" + fomatter.format(titleVector[i])
-							+ "\",");
+					if (Double.isInfinite(titleVector[i])
+							|| Double.isNaN(titleVector[i]))
+						resultStr.append("\"0\",");
+					else
+						resultStr.append("\"" + fomatter.format(titleVector[i])
+								+ "\",");
 				}
 				// (query, title) L2-distance
 				double qtL2Distance = parser.vectorDistance(queryVector,
 						titleVector);
-				resultStr.append("\"" + fomatter.format(qtL2Distance) + "\"");
+
+				if (Double.isInfinite(qtL2Distance)
+						|| Double.isNaN(qtL2Distance))
+					resultStr.append("\"999\"");
+				else
+					resultStr.append("\"" + fomatter.format(qtL2Distance)
+							+ "\"");
+
 				resultStr.append(newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
