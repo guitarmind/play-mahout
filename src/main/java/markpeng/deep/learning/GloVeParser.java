@@ -71,7 +71,13 @@ public class GloVeParser {
 		return score;
 	}
 
-	public double vectorDistance(String target1, String target2,
+	public double vectorSimilarity(double[] vector1, double[] vector2) {
+		double score = 0.0;
+		score = CosineSimilarity.compute(vector1, vector2);
+		return score;
+	}
+
+	public double vectorL2Distance(String target1, String target2,
 			TreeMap<String, double[]> gloveVectors) {
 		double dist = 0.0;
 		double[] vector1 = gloveVectors.get(target1);
@@ -87,7 +93,7 @@ public class GloVeParser {
 		return dist;
 	}
 
-	public double vectorDistance(double[] vector1, double[] vector2) {
+	public double vectorL2Distance(double[] vector1, double[] vector2) {
 		double dist = 0.0;
 
 		// Euclidean distance
@@ -96,6 +102,35 @@ public class GloVeParser {
 			sum += Math.pow(vector1[i] - vector2[i], 2);
 
 		dist = Math.sqrt(sum);
+
+		return dist;
+	}
+
+	public double vectorL1Distance(String target1, String target2,
+			TreeMap<String, double[]> gloveVectors) {
+		double dist = 0.0;
+		double[] vector1 = gloveVectors.get(target1);
+		double[] vector2 = gloveVectors.get(target2);
+
+		// Manhattan distance
+		double sum = 0.0;
+		for (int i = 0; i < vector1.length; i++)
+			sum += Math.abs(vector1[i] - vector2[i]);
+
+		dist = sum;
+
+		return dist;
+	}
+
+	public double vectorL1Distance(double[] vector1, double[] vector2) {
+		double dist = 0.0;
+
+		// Manhattan distance
+		double sum = 0.0;
+		for (int i = 0; i < vector1.length; i++)
+			sum += Math.abs(vector1[i] - vector2[i]);
+
+		dist = sum;
 
 		return dist;
 	}
@@ -112,7 +147,7 @@ public class GloVeParser {
 		// String target1 = "tv";
 		// String target2 = "video";
 		// String target3 = "bag";
-		String target1 = "daisylan";
+		String target1 = "game";
 		String target2 = "video";
 		String target3 = "dress";
 		// double score = parser.vectorSimilarity(target1, target2,
@@ -120,11 +155,18 @@ public class GloVeParser {
 		// System.out.println("Similarity between " + target1 + " and " +
 		// target2
 		// + ": " + score);
-		double dist = parser.vectorDistance(target1, target2, gloveVectors);
-		System.out.println("Distance between " + target1 + " and " + target2
+		double dist = parser.vectorL2Distance(target1, target2, gloveVectors);
+		System.out.println("L2 Distance between " + target1 + " and " + target2
 				+ ": " + dist);
-		double dist2 = parser.vectorDistance(target1, target3, gloveVectors);
-		System.out.println("Distance between " + target1 + " and " + target3
+		double dist2 = parser.vectorL2Distance(target1, target3, gloveVectors);
+		System.out.println("L2 Distance between " + target1 + " and " + target3
 				+ ": " + dist2);
+		double distL1 = parser.vectorL1Distance(target1, target2, gloveVectors);
+		System.out.println("L1 Distance between " + target1 + " and " + target2
+				+ ": " + distL1);
+		double dist2L1 = parser
+				.vectorL1Distance(target1, target3, gloveVectors);
+		System.out.println("L1 Distance between " + target1 + " and " + target3
+				+ ": " + dist2L1);
 	}
 }

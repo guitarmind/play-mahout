@@ -93,8 +93,22 @@ public class GloVeFeatureGenerator {
 		// title
 		for (int i = 0; i < vectorSize; i++)
 			resultStr.append("\"TVect_" + (i + 1) + "\",");
+		// desc
+		for (int i = 0; i < vectorSize; i++)
+			resultStr.append("\"DVect_" + (i + 1) + "\",");
 		// (query, title) L2-distance
-		resultStr.append("\"QT_L2distance\"");
+		resultStr.append("\"QT_L2distance\",");
+		// (query, title) L1-distance
+		resultStr.append("\"QT_L1distance\",");
+		// (query, title) cosine similarity
+		resultStr.append("\"QT_CosSim\",");
+		// (query, desc) L2-distance
+		resultStr.append("\"QD_L2distance\",");
+		// (query, desc) L1-distance
+		resultStr.append("\"QD_L1distance\",");
+		// (query, desc) cosine similarity
+		resultStr.append("\"QD_CosSim\"");
+
 		resultStr.append(newLine);
 
 		try {
@@ -114,25 +128,97 @@ public class GloVeFeatureGenerator {
 				int medianRelevance = Integer.parseInt(tokens[4]);
 				double relevance_variance = Double.parseDouble(tokens[5]);
 
+				// missing description: use title
+				if (productDesc.length() < 3)
+					productDesc = productTitle;
+
 				resultStr.append("\"" + id + "\",");
 				// query
 				double[] queryVector = parser.getAverageVector(query,
 						gloveVectors, vectorSize);
 				for (int i = 0; i < vectorSize; i++) {
-					resultStr.append("\"" + fomatter.format(queryVector[i])
-							+ "\",");
+					if (Double.isInfinite(queryVector[i])
+							|| Double.isNaN(queryVector[i]))
+						resultStr.append("\"0\",");
+					else
+						resultStr.append("\"" + fomatter.format(queryVector[i])
+								+ "\",");
 				}
 				// title
 				double[] titleVector = parser.getAverageVector(productTitle,
 						gloveVectors, vectorSize);
 				for (int i = 0; i < vectorSize; i++) {
-					resultStr.append("\"" + fomatter.format(titleVector[i])
-							+ "\",");
+					if (Double.isInfinite(titleVector[i])
+							|| Double.isNaN(titleVector[i]))
+						resultStr.append("\"0\",");
+					else
+						resultStr.append("\"" + fomatter.format(titleVector[i])
+								+ "\",");
 				}
+				// desc
+				double[] descVector = parser.getAverageVector(productDesc,
+						gloveVectors, vectorSize);
+				for (int i = 0; i < vectorSize; i++) {
+					if (Double.isInfinite(descVector[i])
+							|| Double.isNaN(descVector[i]))
+						resultStr.append("\"0\",");
+					else
+						resultStr.append("\"" + fomatter.format(descVector[i])
+								+ "\",");
+				}
+
 				// (query, title) L2-distance
-				double qtL2Distance = parser.vectorDistance(queryVector,
+				double qtL2Distance = parser.vectorL2Distance(queryVector,
 						titleVector);
-				resultStr.append("\"" + fomatter.format(qtL2Distance) + "\"");
+				if (Double.isInfinite(qtL2Distance)
+						|| Double.isNaN(qtL2Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qtL2Distance)
+							+ "\",");
+				// (query, title) L1-distance
+				double qtL1Distance = parser.vectorL1Distance(queryVector,
+						titleVector);
+				if (Double.isInfinite(qtL1Distance)
+						|| Double.isNaN(qtL1Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qtL1Distance)
+							+ "\",");
+				// (query, title) cosine similarity
+				double qtCosSim = parser.vectorSimilarity(queryVector,
+						titleVector);
+				if (Double.isInfinite(qtCosSim) || Double.isNaN(qtCosSim))
+					resultStr.append("\"0\",");
+				else
+					resultStr.append("\"" + fomatter.format(qtCosSim) + "\",");
+
+				// (query, desc) L2-distance
+				double qdL2Distance = parser.vectorL2Distance(queryVector,
+						descVector);
+				if (Double.isInfinite(qdL2Distance)
+						|| Double.isNaN(qdL2Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qdL2Distance)
+							+ "\",");
+				// (query, desc) L1-distance
+				double qdL1Distance = parser.vectorL1Distance(queryVector,
+						descVector);
+				if (Double.isInfinite(qdL1Distance)
+						|| Double.isNaN(qdL1Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qdL1Distance)
+							+ "\",");
+				// (query, desc) cosine similarity
+				double qdCosSim = parser.vectorSimilarity(queryVector,
+						descVector);
+				if (Double.isInfinite(qdCosSim) || Double.isNaN(qdCosSim))
+					resultStr.append("\"0\"");
+				else
+					resultStr.append("\"" + fomatter.format(qdCosSim) + "\"");
+
 				resultStr.append(newLine);
 
 				if (resultStr.length() >= BUFFER_LENGTH) {
@@ -167,8 +253,22 @@ public class GloVeFeatureGenerator {
 		// title
 		for (int i = 0; i < vectorSize; i++)
 			resultStr.append("\"TVect_" + (i + 1) + "\",");
+		// desc
+		for (int i = 0; i < vectorSize; i++)
+			resultStr.append("\"DVect_" + (i + 1) + "\",");
 		// (query, title) L2-distance
-		resultStr.append("\"QT_L2distance\"");
+		resultStr.append("\"QT_L2distance\",");
+		// (query, title) L1-distance
+		resultStr.append("\"QT_L1distance\",");
+		// (query, title) cosine similarity
+		resultStr.append("\"QT_CosSim\",");
+		// (query, desc) L2-distance
+		resultStr.append("\"QD_L2distance\",");
+		// (query, desc) L1-distance
+		resultStr.append("\"QD_L1distance\",");
+		// (query, desc) cosine similarity
+		resultStr.append("\"QD_CosSim\"");
+
 		resultStr.append(newLine);
 
 		try {
@@ -185,6 +285,10 @@ public class GloVeFeatureGenerator {
 				String query = tokens[1].replace("\"", "").trim();
 				String productTitle = tokens[2].replace("\"", "").trim();
 				String productDesc = tokens[3].replace("\"", "").trim();
+
+				// missing description: use title
+				if (productDesc.length() < 3)
+					productDesc = productTitle;
 
 				resultStr.append("\"" + id + "\",");
 				// query
@@ -209,16 +313,69 @@ public class GloVeFeatureGenerator {
 						resultStr.append("\"" + fomatter.format(titleVector[i])
 								+ "\",");
 				}
-				// (query, title) L2-distance
-				double qtL2Distance = parser.vectorDistance(queryVector,
-						titleVector);
+				// desc
+				double[] descVector = parser.getAverageVector(productDesc,
+						gloveVectors, vectorSize);
+				for (int i = 0; i < vectorSize; i++) {
+					if (Double.isInfinite(descVector[i])
+							|| Double.isNaN(descVector[i]))
+						resultStr.append("\"0\",");
+					else
+						resultStr.append("\"" + fomatter.format(descVector[i])
+								+ "\",");
+				}
 
+				// (query, title) L2-distance
+				double qtL2Distance = parser.vectorL2Distance(queryVector,
+						titleVector);
 				if (Double.isInfinite(qtL2Distance)
 						|| Double.isNaN(qtL2Distance))
-					resultStr.append("\"999\"");
+					resultStr.append("\"999\",");
 				else
 					resultStr.append("\"" + fomatter.format(qtL2Distance)
-							+ "\"");
+							+ "\",");
+				// (query, title) L1-distance
+				double qtL1Distance = parser.vectorL1Distance(queryVector,
+						titleVector);
+				if (Double.isInfinite(qtL1Distance)
+						|| Double.isNaN(qtL1Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qtL1Distance)
+							+ "\",");
+				// (query, title) cosine similarity
+				double qtCosSim = parser.vectorSimilarity(queryVector,
+						titleVector);
+				if (Double.isInfinite(qtCosSim) || Double.isNaN(qtCosSim))
+					resultStr.append("\"0\",");
+				else
+					resultStr.append("\"" + fomatter.format(qtCosSim) + "\",");
+
+				// (query, desc) L2-distance
+				double qdL2Distance = parser.vectorL2Distance(queryVector,
+						descVector);
+				if (Double.isInfinite(qdL2Distance)
+						|| Double.isNaN(qdL2Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qdL2Distance)
+							+ "\",");
+				// (query, desc) L1-distance
+				double qdL1Distance = parser.vectorL1Distance(queryVector,
+						descVector);
+				if (Double.isInfinite(qdL1Distance)
+						|| Double.isNaN(qdL1Distance))
+					resultStr.append("\"999\",");
+				else
+					resultStr.append("\"" + fomatter.format(qdL1Distance)
+							+ "\",");
+				// (query, desc) cosine similarity
+				double qdCosSim = parser.vectorSimilarity(queryVector,
+						descVector);
+				if (Double.isInfinite(qdCosSim) || Double.isNaN(qdCosSim))
+					resultStr.append("\"0\"");
+				else
+					resultStr.append("\"" + fomatter.format(qdCosSim) + "\"");
 
 				resultStr.append(newLine);
 
@@ -249,8 +406,12 @@ public class GloVeFeatureGenerator {
 		args = new String[6];
 		args[0] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_filterred_porter_stem_compound_markpeng_20150606.csv";
 		args[1] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_filterred_porter_stem_compound_markpeng_20150606.csv";
-		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_glove_markpeng_20150617.csv";
-		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_glove_markpeng_20150617.csv";
+		args[2] = "/home/markpeng/Share/Kaggle/Search Results Relevance/train_T+D_glove_markpeng_20150621.csv";
+		args[3] = "/home/markpeng/Share/Kaggle/Search Results Relevance/test_T+D_glove_markpeng_20150621.csv";
+		// args[2] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/train_glove_markpeng_20150617.csv";
+		// args[3] =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/test_glove_markpeng_20150617.csv";
 		args[4] = "/home/markpeng/Share/Kaggle/Search Results Relevance/ssr_vectors_20150616.txt";
 
 		if (args.length < 5) {
