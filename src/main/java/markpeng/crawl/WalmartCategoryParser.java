@@ -120,14 +120,16 @@ public class WalmartCategoryParser {
 				System.out.println("Most-matched category for " + jsonFile
 						+ ": " + mostMatchedCategories.get(0).getKey());
 			} else {
-				System.out.println("Majority category for " + jsonFile + ": "
-						+ categories.get(0).getKey());
-				outputCategory[1] = categories.get(0).getKey();
-				// outputCategory[1] = "Unknown";
+				// System.out.println("Majority category for " + jsonFile + ": "
+				// + categories.get(0).getKey());
+				// outputCategory[1] = categories.get(0).getKey();
+				outputCategory[1] = "Unknown";
 			}
 
 		} else {
 			System.out.println("Unknown category for " + jsonFile);
+			outputCategory[0] = jsonFile.replace(".json", "");
+			outputCategory[1] = "Unknown";
 		}
 
 		return outputCategory;
@@ -176,27 +178,32 @@ public class WalmartCategoryParser {
 		List<Item> items = new ArrayList<Item>();
 
 		JsonElement jelement = new JsonParser().parse(json);
-		JsonObject jobject = jelement.getAsJsonObject();
+		if (jelement != null && jelement.isJsonObject()) {
+			JsonObject jobject = jelement.getAsJsonObject();
 
-		if (jobject.has("items")) {
-			JsonArray itemArray = jobject.getAsJsonArray("items");
-			for (final JsonElement e : itemArray) {
-				final JsonObject itemObj = e.getAsJsonObject();
-				String itemId = itemObj.get("itemId").getAsString();
-				String name = itemObj.get("name").getAsString();
-				String categoryPath = itemObj.get("categoryPath").getAsString();
+			if (jobject != null && jobject.has("items")) {
+				JsonArray itemArray = jobject.getAsJsonArray("items");
+				for (final JsonElement e : itemArray) {
+					final JsonObject itemObj = e.getAsJsonObject();
+					String itemId = itemObj.get("itemId").getAsString();
+					String name = itemObj.get("name").getAsString();
+					String categoryPath = "Unknown";
+					if (itemObj.has("categoryPath"))
+						categoryPath = itemObj.get("categoryPath")
+								.getAsString();
 
-				System.out.println("itemId: " + itemId);
-				System.out.println("name: " + name);
-				System.out.println("categoryPath: " + categoryPath + "\n");
+					System.out.println("itemId: " + itemId);
+					System.out.println("name: " + name);
+					System.out.println("categoryPath: " + categoryPath + "\n");
 
-				Item item = new Item(itemId, name, categoryPath);
-				items.add(item);
+					Item item = new Item(itemId, name, categoryPath);
+					items.add(item);
+				}
+				System.out.println("item counts: " + itemArray.size() + "\n");
+
 			}
-			System.out.println("item counts: " + itemArray.size() + "\n");
-
-		}
-
+		} else
+			System.out.println("wrong json: " + json);
 		return items;
 	}
 
@@ -443,17 +450,23 @@ public class WalmartCategoryParser {
 	public static void main(String[] args) throws Exception {
 		WalmartCategoryParser parser = new WalmartCategoryParser();
 
-		String folderPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/walmart/query";
-		String compoundPath = "/home/markpeng/Share/Kaggle/Search Results Relevance/english-compound-words.txt";
+		String folderPath = args[0];
+		String compoundPath = args[1];
+		String outputFile = args[2];
+		// String folderPath =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/walmart/query";
+		// String compoundPath =
+		// "/home/markpeng/Share/Kaggle/Search Results Relevance/english-compound-words.txt";
 		// String outputFile =
 		// "/../query_walmart_categories_mostMatched_20150616.txt";
-		String outputFile = "/../query_walmart_categories_mostMatched_majority_20150616.txt";
+		// String outputFile =
+		// "/../query_walmart_categories_mostMatched_majority_20150616.txt";
 
 		final File folder = new File(folderPath);
 
 		// write to text file
 		BufferedWriter out = new BufferedWriter(new OutputStreamWriter(
-				new FileOutputStream(folderPath + outputFile, false), "UTF-8"));
+				new FileOutputStream(outputFile, false), "UTF-8"));
 		try {
 			int unknown = 0;
 			for (final File fileEntry : folder.listFiles()) {
