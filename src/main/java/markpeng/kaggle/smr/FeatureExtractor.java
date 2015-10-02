@@ -40,7 +40,7 @@ public class FeatureExtractor implements Runnable {
 
 	private String folderId = null;
 
-	private final String[] TAGS = { "meta", "title", "body", "p", "a", "image",
+	private final String[] TAGS = { "meta", "title", "body", "p", "a", "img",
 			"base", "link", "script", "style", "div", "ul", "li", "span", "i",
 			"nav", "button", "form", "iframe", "h1", "h2", "h3", "h4", "h5",
 			"br", "input", "b", "em", "table", "tr", "td", "hr", "svg",
