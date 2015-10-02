@@ -1,6 +1,7 @@
 package markpeng.kaggle.smr;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -18,10 +19,17 @@ public class FeatureExtractor implements Runnable {
 	private String outputTrain = null;
 	private String outputTest = null;
 
+	private String folderId = null;
+
 	public FeatureExtractor(String htmlFolderPath,
 			Hashtable<String, String> trainFileList, List<String> testFileList,
-			String outputTrain, String outputTest) {
-
+			String outputTrain, String outputTest, String folderId) {
+		this.htmlFolderPath = htmlFolderPath;
+		this.trainFileList = trainFileList;
+		this.testFileList = testFileList;
+		this.outputTrain = outputTrain;
+		this.outputTest = outputTest;
+		this.folderId = folderId;
 	}
 
 	public static Hashtable<String, String> readTrainListFile(String filePath)
@@ -77,9 +85,14 @@ public class FeatureExtractor implements Runnable {
 	@Override
 	public void run() {
 		try {
-			// generatCSV(label, trainFileNames, trainFolder, outputCsv,
-			// filtered,
-			// ngram);
+			File checker = new File(htmlFolderPath + "/" + folderId);
+			if (checker.exists()) {
+				System.out.println("Folder " + folderId + ": "
+						+ checker.listFiles().length + " files.");
+				// for (final File fileEntry : checker.listFiles()) {
+				// }
+			}
+
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -97,17 +110,17 @@ public class FeatureExtractor implements Runnable {
 		Hashtable<String, String> trainFileList = readTrainListFile(trainFileListPath);
 		List<String> testFileList = readTestListFile(testFileListPath);
 
-		Thread[] threads = new Thread[5];
-		for (int i = 0; i < 5; i++) {
+		Thread[] threads = new Thread[6];
+		for (int i = 0; i < 6; i++) {
 			System.out.println("Running for folder " + i + " ...");
-			FeatureExtractor worker = new FeatureExtractor();
+			FeatureExtractor worker = new FeatureExtractor(htmlFolderPath,
+					trainFileList, testFileList, outputTrain, outputTest,
+					Integer.toString(i));
 			threads[i] = new Thread(worker);
 			threads[i].start();
 
 			System.out.println("Running thread for folder " + i + " ...");
 			Thread.sleep(2000);
-
-			i++;
 		}
 
 		for (Thread t : threads)
