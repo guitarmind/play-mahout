@@ -11,11 +11,12 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.TreeMap;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-public class FeatureExtractor implements Runnable {
+public class TagListExtractor implements Runnable {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
@@ -28,14 +29,13 @@ public class FeatureExtractor implements Runnable {
 
 	private String folderId = null;
 
+	TreeMap<String, Integer> tagList = new TreeMap<String, Integer>();
+
 	private final String[] TAGS = { "html", "head", "meta", "title", "body",
 			"p", "a", "image", "base", "link", "script", "style", "div", "ul",
-			"li", "span", "i", "nav", "button", "form", "iframe", "h1", "h2",
-			"h3", "h4", "h5", "br", "input", "b", "script", "em", "table",
-			"tr", "td", "hr", "svg", "symbol", "path", "g", "use", "label",
-			"section", "noscript", "article", "footer" };
+			"li", "span", "i", "nav" };
 
-	public FeatureExtractor(String htmlFolderPath,
+	public TagListExtractor(String htmlFolderPath,
 			Hashtable<String, String> trainFileList, List<String> testFileList,
 			String outputTrain, String outputTest, String folderId) {
 		this.htmlFolderPath = htmlFolderPath;
@@ -131,11 +131,12 @@ public class FeatureExtractor implements Runnable {
 							}
 
 							Document doc = Jsoup.parse(htmlStr.toString());
-							// get all raw text
-							String title = doc.title();
-							System.out.println(title);
-							String allText = doc.text();
-							System.out.println(allText.length());
+							doc.
+							// // get all raw text
+							// String title = doc.title();
+							// System.out.println(title);
+							// String allText = doc.text();
+							// System.out.println(allText.length());
 						} finally {
 							in.close();
 						}
@@ -178,21 +179,16 @@ public class FeatureExtractor implements Runnable {
 		Hashtable<String, String> trainFileList = readTrainListFile(trainFileListPath);
 		List<String> testFileList = readTestListFile(testFileListPath);
 
-		Thread[] threads = new Thread[6];
 		for (int i = 0; i < 6; i++) {
 			System.out.println("Running for folder " + i + " ...");
-			FeatureExtractor worker = new FeatureExtractor(htmlFolderPath,
+			TagListExtractor worker = new TagListExtractor(htmlFolderPath,
 					trainFileList, testFileList, outputTrain, outputTest,
 					Integer.toString(i));
-			threads[i] = new Thread(worker);
-			threads[i].start();
+			worker.run();
 
 			System.out.println("Running thread for folder " + i + " ...");
 			Thread.sleep(2000);
 		}
-
-		for (Thread t : threads)
-			t.join();
 	}
 
 }
