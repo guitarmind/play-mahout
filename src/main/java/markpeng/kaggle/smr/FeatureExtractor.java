@@ -117,13 +117,9 @@ public class FeatureExtractor implements Runnable {
 			try {
 				if (folderId.equals("5")) {
 					out = new BufferedWriter(new OutputStreamWriter(
-							new FileOutputStream(outputTest, false), "UTF-8"));
-				} else {
-					out = new BufferedWriter(new OutputStreamWriter(
-							new FileOutputStream(outputTrain, false), "UTF-8"));
-				}
+							new FileOutputStream(outputTest + "_" + folderId
+									+ ".csv", false), "UTF-8"));
 
-				if (folderId.equals("0") || folderId.equals("5")) {
 					// create headers
 					resultStr.append("\"file\",");
 					int tindex = 0;
@@ -136,6 +132,28 @@ public class FeatureExtractor implements Runnable {
 						tindex++;
 					}
 					resultStr.append(newLine);
+				} else {
+					// if (folderId.equals("0")) {
+					out = new BufferedWriter(new OutputStreamWriter(
+							new FileOutputStream(outputTrain + "_" + folderId
+									+ ".csv", false), "UTF-8"));
+					// create headers
+					resultStr.append("\"file\",");
+					int tindex = 0;
+					for (String t : TAGS) {
+						if (tindex != TAGS.length - 1)
+							resultStr.append("\"" + t + "_count\",");
+						else
+							resultStr.append("\"" + t + "_count\"");
+
+						tindex++;
+					}
+					resultStr.append(newLine);
+					// } else {
+					// out = new BufferedWriter(new OutputStreamWriter(
+					// new FileOutputStream(outputTrain, true),
+					// "UTF-8"));
+					// }
 				}
 
 				File checker = new File(htmlFolderPath + "/" + folderId);
@@ -203,7 +221,7 @@ public class FeatureExtractor implements Runnable {
 							resultStr.setLength(0);
 						}
 
-						System.out.println("Scanned html file in label "
+						System.out.println("Scanned html file in folder "
 								+ folderId + ": " + f.getName());
 
 					} // end of for loop
@@ -348,16 +366,16 @@ public class FeatureExtractor implements Runnable {
 			FeatureExtractor worker = new FeatureExtractor(htmlFolderPath,
 					trainFileList, testFileList, outputTrain, outputTest,
 					Integer.toString(i));
-			// threads[i] = new Thread(worker);
-			// threads[i].start();
-			worker.run();
+			threads[i] = new Thread(worker);
+			threads[i].start();
+			// worker.run();
 
 			System.out.println("Running thread for folder " + i + " ...");
 			Thread.sleep(2000);
 		}
 
-		// for (Thread t : threads)
-		// t.join();
+		for (Thread t : threads)
+			t.join();
 	}
 
 }
