@@ -48,124 +48,124 @@ public class GloVeFeatureGenerator {
 		BufferedWriter testOut = new BufferedWriter(new OutputStreamWriter(
 				new FileOutputStream(outputTest, false), "UTF-8"));
 
-		CsvParserSettings settings = new CsvParserSettings();
-		settings.setParseUnescapedQuotes(false);
-		settings.getFormat().setLineSeparator("\n");
-		settings.getFormat().setDelimiter(',');
-		settings.getFormat().setQuote('"');
-		settings.setHeaderExtractionEnabled(true);
-		settings.setEmptyValue("");
-		settings.setMaxCharsPerColumn(99999999);
+		// CsvParserSettings settings = new CsvParserSettings();
+		// settings.setParseUnescapedQuotes(false);
+		// settings.getFormat().setLineSeparator("\n");
+		// settings.getFormat().setDelimiter(',');
+		// settings.getFormat().setQuote('"');
+		// settings.setHeaderExtractionEnabled(true);
+		// settings.setEmptyValue("");
+		// settings.setMaxCharsPerColumn(40960);
 
 		// -------------------------------------------------------------------------------------------
 		// Train Data
 
 		// create headers
-		resultStr.append("\"file\",");
-		// title
-		for (int i = 0; i < vectorSize; i++)
-			resultStr.append("\"TitleVect_" + (i + 1) + "\",");
-		// content
-		for (int i = 0; i < vectorSize; i++)
-			resultStr.append("\"ContentVect_" + (i + 1) + "\",");
-		// (title, content) L2-distance
-		resultStr.append("\"TC_L2distance\",");
-		// (title, content) L1-distance
-		resultStr.append("\"TC_L1distance\",");
-		// (title, content) cosine similarity
-		resultStr.append("\"TC_CosSim\"");
-
-		resultStr.append(newLine);
-
-		try {
-			// creates a CSV parser
-			CsvParser trainParser = new CsvParser(settings);
-
-			// call beginParsing to read records one by one, iterator-style.
-			trainParser.beginParsing(trainIn);
-
-			int count = 0;
-			String[] tokens;
-			while ((tokens = trainParser.parseNext()) != null) {
-				String file = tokens[0];
-				String title = tokens[1].replace("\"", "").trim();
-				String content = tokens[2].replace("\"", "").trim();
-
-				// missing content: use title
-				if (content.length() < 3)
-					content = title;
-
-				resultStr.append("\"" + file + "\",");
-				// title
-				double[] titleVector = parser.getAverageVector(title,
-						gloveVectors, vectorSize);
-				for (int i = 0; i < vectorSize; i++) {
-					if (Double.isInfinite(titleVector[i])
-							|| Double.isNaN(titleVector[i]))
-						resultStr.append("\"0\",");
-					else
-						resultStr.append("\"" + fomatter.format(titleVector[i])
-								+ "\",");
-				}
-				// content
-				double[] descVector = parser.getAverageVector(content,
-						gloveVectors, vectorSize);
-				for (int i = 0; i < vectorSize; i++) {
-					if (Double.isInfinite(descVector[i])
-							|| Double.isNaN(descVector[i]))
-						resultStr.append("\"0\",");
-					else
-						resultStr.append("\"" + fomatter.format(descVector[i])
-								+ "\",");
-				}
-
-				// (title, content) L2-distance
-				double qdL2Distance = parser.vectorL2Distance(titleVector,
-						descVector);
-				if (Double.isInfinite(qdL2Distance)
-						|| Double.isNaN(qdL2Distance))
-					resultStr.append("\"999\",");
-				else
-					resultStr.append("\"" + fomatter.format(qdL2Distance)
-							+ "\",");
-				// (title, content) L1-distance
-				double qdL1Distance = parser.vectorL1Distance(titleVector,
-						descVector);
-				if (Double.isInfinite(qdL1Distance)
-						|| Double.isNaN(qdL1Distance))
-					resultStr.append("\"999\",");
-				else
-					resultStr.append("\"" + fomatter.format(qdL1Distance)
-							+ "\",");
-				// (title, content) cosine similarity
-				double qdCosSim = parser.vectorSimilarity(titleVector,
-						descVector);
-				if (Double.isInfinite(qdCosSim) || Double.isNaN(qdCosSim))
-					resultStr.append("\"0\"");
-				else
-					resultStr.append("\"" + fomatter.format(qdCosSim) + "\"");
-
-				resultStr.append(newLine);
-
-				if (resultStr.length() >= BUFFER_LENGTH) {
-					trainOut.write(resultStr.toString());
-					trainOut.flush();
-					resultStr.setLength(0);
-				}
-
-				count++;
-			}
-
-			System.out.println("Total train records: " + count);
-
-		} finally {
-			trainIn.close();
-
-			trainOut.write(resultStr.toString());
-			trainOut.flush();
-			trainOut.close();
-			resultStr.setLength(0);
-		}
+		// resultStr.append("\"file\",");
+		// // title
+		// for (int i = 0; i < vectorSize; i++)
+		// resultStr.append("\"TitleVect_" + (i + 1) + "\",");
+		// // content
+		// for (int i = 0; i < vectorSize; i++)
+		// resultStr.append("\"ContentVect_" + (i + 1) + "\",");
+		// // (title, content) L2-distance
+		// resultStr.append("\"TC_L2distance\",");
+		// // (title, content) L1-distance
+		// resultStr.append("\"TC_L1distance\",");
+		// // (title, content) cosine similarity
+		// resultStr.append("\"TC_CosSim\"");
+		//
+		// resultStr.append(newLine);
+		//
+		// try {
+		// // creates a CSV parser
+		// CsvParser trainParser = new CsvParser(settings);
+		//
+		// // call beginParsing to read records one by one, iterator-style.
+		// trainParser.beginParsing(trainIn);
+		//
+		// int count = 0;
+		// String[] tokens;
+		// while ((tokens = trainParser.parseNext()) != null) {
+		// String file = tokens[0].replace("\"", "").trim();
+		// String title = tokens[1].replace("\"", "").trim();
+		// String content = tokens[2].replace("\"", "").trim();
+		//
+		// // missing content: use title
+		// if (content.length() < 3)
+		// content = title;
+		//
+		// resultStr.append("\"" + file + "\",");
+		// // title
+		// double[] titleVector = parser.getAverageVector(title,
+		// gloveVectors, vectorSize);
+		// for (int i = 0; i < vectorSize; i++) {
+		// if (Double.isInfinite(titleVector[i])
+		// || Double.isNaN(titleVector[i]))
+		// resultStr.append("\"0\",");
+		// else
+		// resultStr.append("\"" + fomatter.format(titleVector[i])
+		// + "\",");
+		// }
+		// // content
+		// double[] descVector = parser.getAverageVector(content,
+		// gloveVectors, vectorSize);
+		// for (int i = 0; i < vectorSize; i++) {
+		// if (Double.isInfinite(descVector[i])
+		// || Double.isNaN(descVector[i]))
+		// resultStr.append("\"0\",");
+		// else
+		// resultStr.append("\"" + fomatter.format(descVector[i])
+		// + "\",");
+		// }
+		//
+		// // (title, content) L2-distance
+		// double qdL2Distance = parser.vectorL2Distance(titleVector,
+		// descVector);
+		// if (Double.isInfinite(qdL2Distance)
+		// || Double.isNaN(qdL2Distance))
+		// resultStr.append("\"999\",");
+		// else
+		// resultStr.append("\"" + fomatter.format(qdL2Distance)
+		// + "\",");
+		// // (title, content) L1-distance
+		// double qdL1Distance = parser.vectorL1Distance(titleVector,
+		// descVector);
+		// if (Double.isInfinite(qdL1Distance)
+		// || Double.isNaN(qdL1Distance))
+		// resultStr.append("\"999\",");
+		// else
+		// resultStr.append("\"" + fomatter.format(qdL1Distance)
+		// + "\",");
+		// // (title, content) cosine similarity
+		// double qdCosSim = parser.vectorSimilarity(titleVector,
+		// descVector);
+		// if (Double.isInfinite(qdCosSim) || Double.isNaN(qdCosSim))
+		// resultStr.append("\"0\"");
+		// else
+		// resultStr.append("\"" + fomatter.format(qdCosSim) + "\"");
+		//
+		// resultStr.append(newLine);
+		//
+		// if (resultStr.length() >= BUFFER_LENGTH) {
+		// trainOut.write(resultStr.toString());
+		// trainOut.flush();
+		// resultStr.setLength(0);
+		// }
+		//
+		// count++;
+		// }
+		//
+		// System.out.println("Total train records: " + count);
+		//
+		// } finally {
+		// trainIn.close();
+		//
+		// trainOut.write(resultStr.toString());
+		// trainOut.flush();
+		// trainOut.close();
+		// resultStr.setLength(0);
+		// }
 
 		// -------------------------------------------------------------------------------------------
 		// Test Data
@@ -191,21 +191,36 @@ public class GloVeFeatureGenerator {
 
 		try {
 			// creates a CSV parser
-			CsvParser testParser = new CsvParser(settings);
+			// CsvParser testParser = new CsvParser(settings);
 
 			// call beginParsing to read records one by one, iterator-style.
-			testParser.beginParsing(testIn);
+			// testParser.beginParsing(testIn);
 
 			int count = 0;
-			String[] tokens;
-			while ((tokens = testParser.parseNext()) != null) {
-				String file = tokens[0];
-				String title = tokens[1].replace("\"", "").trim();
-				String content = tokens[2].replace("\"", "").trim();
+			// String[] tokens;
+			// while ((tokens = testParser.parseNext()) != null) {
 
-				// missing content: use title
-				if (content.length() < 3)
-					content = title;
+			// skip header
+			testIn.readLine();
+
+			String aLine = null;
+			while ((aLine = testIn.readLine()) != null) {
+				String tokens[] = aLine.split(",");
+
+				String file = tokens[0].replace("\"", "").trim();
+
+				System.out.println("Procesing " + file + " ....");
+
+				String title = "";
+				String content = "";
+				if (tokens.length == 3) {
+					title = tokens[1].replace("\"", "").trim();
+					content = tokens[2].replace("\"", "").trim();
+
+					// missing content: use title
+					if (content.length() < 3)
+						content = title;
+				}
 
 				resultStr.append("\"" + file + "\",");
 				// title
