@@ -27,7 +27,7 @@ import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-public class FeatureExtractor implements Runnable {
+public class JsFeatureExtractor implements Runnable {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
@@ -47,7 +47,7 @@ public class FeatureExtractor implements Runnable {
 			"symbol", "path", "g", "use", "label", "section", "noscript",
 			"article", "footer" };
 
-	public FeatureExtractor(String htmlFolderPath,
+	public JsFeatureExtractor(String htmlFolderPath,
 			Hashtable<String, String> trainFileList, List<String> testFileList,
 			String outputTrain, String outputTest, String folderId) {
 		this.htmlFolderPath = htmlFolderPath;
@@ -282,7 +282,8 @@ public class FeatureExtractor implements Runnable {
 				}
 			}
 
-			String finalText = postText.toString().trim().replace("'", "");
+			String finalText = postText.toString().trim().replace("'", "")
+					.replace("\"", "");
 			if (finalText.length() > 1)
 				result = finalText;
 
@@ -363,7 +364,7 @@ public class FeatureExtractor implements Runnable {
 		Thread[] threads = new Thread[6];
 		for (int i = 0; i < 6; i++) {
 			System.out.println("Running for folder " + i + " ...");
-			FeatureExtractor worker = new FeatureExtractor(htmlFolderPath,
+			JsFeatureExtractor worker = new JsFeatureExtractor(htmlFolderPath,
 					trainFileList, testFileList, outputTrain, outputTest,
 					Integer.toString(i));
 			threads[i] = new Thread(worker);

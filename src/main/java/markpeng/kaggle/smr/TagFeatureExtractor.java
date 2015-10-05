@@ -27,7 +27,7 @@ import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-public class TitleContentGenerator implements Runnable {
+public class TagFeatureExtractor implements Runnable {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
@@ -47,7 +47,7 @@ public class TitleContentGenerator implements Runnable {
 			"symbol", "path", "g", "use", "label", "section", "noscript",
 			"article", "footer" };
 
-	public TitleContentGenerator(String htmlFolderPath,
+	public TagFeatureExtractor(String htmlFolderPath,
 			Hashtable<String, String> trainFileList, List<String> testFileList,
 			String outputTrain, String outputTest, String folderId) {
 		this.htmlFolderPath = htmlFolderPath;
@@ -121,7 +121,16 @@ public class TitleContentGenerator implements Runnable {
 									+ ".csv", false), "UTF-8"));
 
 					// create headers
-					resultStr.append("\"file\",\"title\",\"content\"");
+					resultStr.append("\"file\",");
+					int tindex = 0;
+					for (String t : TAGS) {
+						if (tindex != TAGS.length - 1)
+							resultStr.append("\"" + t + "_count\",");
+						else
+							resultStr.append("\"" + t + "_count\"");
+
+						tindex++;
+					}
 					resultStr.append(newLine);
 				} else {
 					// if (folderId.equals("0")) {
@@ -129,7 +138,16 @@ public class TitleContentGenerator implements Runnable {
 							new FileOutputStream(outputTrain + "_" + folderId
 									+ ".csv", false), "UTF-8"));
 					// create headers
-					resultStr.append("\"file\",\"title\",\"content\"");
+					resultStr.append("\"file\",");
+					int tindex = 0;
+					for (String t : TAGS) {
+						if (tindex != TAGS.length - 1)
+							resultStr.append("\"" + t + "_count\",");
+						else
+							resultStr.append("\"" + t + "_count\"");
+
+						tindex++;
+					}
 					resultStr.append(newLine);
 					// } else {
 					// out = new BufferedWriter(new OutputStreamWriter(
@@ -162,39 +180,35 @@ public class TitleContentGenerator implements Runnable {
 										new FileInputStream(file), "UTF-8"));
 						File f = new File(file);
 						try {
-
-							String processedTitle = "";
-							String processedText = "";
-
-							try {
-								StringBuffer htmlStr = new StringBuffer();
-								String aLine = null;
-								while ((aLine = in.readLine()) != null) {
-									htmlStr.append(aLine + newLine);
-								}
-
-								Document doc = Jsoup.parse(htmlStr.toString());
-								// get all raw text
-								String title = doc.title();
-								// System.out.println(title);
-								String allText = "";
-								if (doc.body() != null && doc.body().hasText()) {
-									allText = doc.body().text().trim();
-									// System.out.println(allText.length());
-								}
-
-								processedTitle = processTextByLucene(title);
-								processedText = processTextByLucene(allText);
-							} catch (IOException e) {
-								processedTitle = "";
-								processedText = "";
-
-								// TODO Auto-generated catch block
-								e.printStackTrace();
+							StringBuffer htmlStr = new StringBuffer();
+							String aLine = null;
+							while ((aLine = in.readLine()) != null) {
+								htmlStr.append(aLine + newLine);
 							}
 
-							resultStr.append("\"" + processedTitle + "\",\""
-									+ processedText + "\"");
+							Document doc = Jsoup.parse(htmlStr.toString());
+							// get all raw text
+							// String title = doc.title();
+							// System.out.println(title);
+							// String allText = doc.body().text().trim();
+							// System.out.println(allText.length());
+							//
+							// String processedTitle =
+							// processTextByLucene(title);
+							// String processedText =
+							// processTextByLucene(allText);
+
+							// get tag counts
+							int tindex = 0;
+							for (String t : TAGS) {
+								int count = doc.select(t).size();
+								if (tindex != TAGS.length - 1)
+									resultStr.append(count + ",");
+								else
+									resultStr.append(count);
+
+								tindex++;
+							}
 							resultStr.append(newLine);
 
 						} finally {
@@ -207,8 +221,8 @@ public class TitleContentGenerator implements Runnable {
 							resultStr.setLength(0);
 						}
 
-						// System.out.println("Scanned html file in folder "
-						// + folderId + ": " + f.getName());
+						System.out.println("Scanned html file in folder "
+								+ folderId + ": " + f.getName());
 
 					} // end of for loop
 				}
@@ -350,9 +364,9 @@ public class TitleContentGenerator implements Runnable {
 		Thread[] threads = new Thread[6];
 		for (int i = 0; i < 6; i++) {
 			System.out.println("Running for folder " + i + " ...");
-			TitleContentGenerator worker = new TitleContentGenerator(
-					htmlFolderPath, trainFileList, testFileList, outputTrain,
-					outputTest, Integer.toString(i));
+			TagFeatureExtractor worker = new TagFeatureExtractor(htmlFolderPath,
+					trainFileList, testFileList, outputTrain, outputTest,
+					Integer.toString(i));
 			threads[i] = new Thread(worker);
 			threads[i].start();
 			// worker.run();
