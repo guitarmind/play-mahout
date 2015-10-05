@@ -10,102 +10,36 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
-import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilter;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.DataNode;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
-public class JsFeatureExtractor implements Runnable {
+public class GloVeJavaScriptInputGenerator implements Runnable {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
 
 	private String htmlFolderPath = null;
-	private Hashtable<String, String> trainFileList = null;
-	private List<String> testFileList = null;
-	private String outputTrain = null;
-	private String outputTest = null;
+	private String outputFile = null;
 
 	private String folderId = null;
 
-	private final String[] TAGS = { "meta", "title", "body", "p", "a", "img",
-			"base", "link", "script", "style", "div", "ul", "li", "span", "i",
-			"nav", "button", "form", "iframe", "h1", "h2", "h3", "h4", "h5",
-			"br", "input", "b", "em", "table", "tr", "td", "hr", "svg",
-			"symbol", "path", "g", "use", "label", "section", "noscript",
-			"article", "footer" };
-
-	public JsFeatureExtractor(String htmlFolderPath,
-			Hashtable<String, String> trainFileList, List<String> testFileList,
-			String outputTrain, String outputTest, String folderId) {
+	public GloVeJavaScriptInputGenerator(String htmlFolderPath,
+			String outputFile, String folderId) {
 		this.htmlFolderPath = htmlFolderPath;
-		this.trainFileList = trainFileList;
-		this.testFileList = testFileList;
-		this.outputTrain = outputTrain;
-		this.outputTest = outputTest;
+		this.outputFile = outputFile;
 		this.folderId = folderId;
-	}
-
-	public static Hashtable<String, String> readTrainListFile(String filePath)
-			throws Exception {
-		Hashtable<String, String> result = new Hashtable<String, String>();
-		BufferedReader in = new BufferedReader(new InputStreamReader(
-				new FileInputStream(filePath), "UTF-8"));
-
-		// skip header
-		in.readLine();
-
-		try {
-			String aLine = null;
-			while ((aLine = in.readLine()) != null) {
-				String tmp = aLine.trim();
-				if (tmp.length() > 0) {
-					String[] tokens = tmp.split(",");
-					result.put(tokens[0], tokens[1]);
-				}
-			}
-		} finally {
-			in.close();
-		}
-
-		return result;
-	}
-
-	public static List<String> readTestListFile(String filePath)
-			throws Exception {
-		List<String> result = new ArrayList<String>();
-		BufferedReader in = new BufferedReader(new InputStreamReader(
-				new FileInputStream(filePath), "UTF-8"));
-
-		// skip header
-		in.readLine();
-
-		try {
-			String aLine = null;
-			while ((aLine = in.readLine()) != null) {
-				String tmp = aLine.trim();
-				if (tmp.length() > 0) {
-					String[] tokens = tmp.split(",");
-					result.add(tokens[0]);
-				}
-			}
-		} finally {
-			in.close();
-		}
-
-		return result;
 	}
 
 	@Override
@@ -115,46 +49,9 @@ public class JsFeatureExtractor implements Runnable {
 			StringBuffer resultStr = new StringBuffer();
 
 			try {
-				if (folderId.equals("5")) {
-					out = new BufferedWriter(new OutputStreamWriter(
-							new FileOutputStream(outputTest + "_" + folderId
-									+ ".csv", false), "UTF-8"));
-
-					// create headers
-					resultStr.append("\"file\",");
-					int tindex = 0;
-					for (String t : TAGS) {
-						if (tindex != TAGS.length - 1)
-							resultStr.append("\"" + t + "_count\",");
-						else
-							resultStr.append("\"" + t + "_count\"");
-
-						tindex++;
-					}
-					resultStr.append(newLine);
-				} else {
-					// if (folderId.equals("0")) {
-					out = new BufferedWriter(new OutputStreamWriter(
-							new FileOutputStream(outputTrain + "_" + folderId
-									+ ".csv", false), "UTF-8"));
-					// create headers
-					resultStr.append("\"file\",");
-					int tindex = 0;
-					for (String t : TAGS) {
-						if (tindex != TAGS.length - 1)
-							resultStr.append("\"" + t + "_count\",");
-						else
-							resultStr.append("\"" + t + "_count\"");
-
-						tindex++;
-					}
-					resultStr.append(newLine);
-					// } else {
-					// out = new BufferedWriter(new OutputStreamWriter(
-					// new FileOutputStream(outputTrain, true),
-					// "UTF-8"));
-					// }
-				}
+				out = new BufferedWriter(new OutputStreamWriter(
+						new FileOutputStream(outputFile + ".txt", true),
+						"UTF-8"));
 
 				File checker = new File(htmlFolderPath + "/" + folderId);
 				if (checker.exists()) {
@@ -171,10 +68,6 @@ public class JsFeatureExtractor implements Runnable {
 
 					for (String file : files) {
 
-						String fileName = file
-								.substring(file.lastIndexOf("/") + 1);
-						resultStr.append("\"" + fileName + "\",");
-
 						BufferedReader in = new BufferedReader(
 								new InputStreamReader(
 										new FileInputStream(file), "UTF-8"));
@@ -186,30 +79,23 @@ public class JsFeatureExtractor implements Runnable {
 								htmlStr.append(aLine + newLine);
 							}
 
+							String processedJS = "";
+							StringBuffer tmpStr = new StringBuffer();
 							Document doc = Jsoup.parse(htmlStr.toString());
-							// get all raw text
-							// String title = doc.title();
-							// System.out.println(title);
-							// String allText = doc.body().text().trim();
-							// System.out.println(allText.length());
-							//
-							// String processedTitle =
-							// processTextByLucene(title);
-							// String processedText =
-							// processTextByLucene(allText);
+							// get all script content
+							Elements scriptElements = doc
+									.getElementsByTag("script");
+							if (scriptElements != null) {
+								for (Element element : scriptElements) {
+									for (DataNode node : element.dataNodes()) {
+										tmpStr.append(node.getWholeData() + " ");
+									}
+								}
 
-							// get tag counts
-							int tindex = 0;
-							for (String t : TAGS) {
-								int count = doc.select(t).size();
-								if (tindex != TAGS.length - 1)
-									resultStr.append(count + ",");
-								else
-									resultStr.append(count);
-
-								tindex++;
+								processedJS = processTextByLucene(tmpStr
+										.toString());
+								resultStr.append(processedJS.trim() + " ");
 							}
-							resultStr.append(newLine);
 
 						} finally {
 							in.close();
@@ -282,8 +168,7 @@ public class JsFeatureExtractor implements Runnable {
 				}
 			}
 
-			String finalText = postText.toString().trim().replace("'", "")
-					.replace("\"", "");
+			String finalText = postText.toString().trim().replace("'", "");
 			if (finalText.length() > 1)
 				result = finalText;
 
@@ -353,20 +238,13 @@ public class JsFeatureExtractor implements Runnable {
 
 	public static void main(String[] args) throws Exception {
 		String htmlFolderPath = args[0];
-		String trainFileListPath = args[1];
-		String testFileListPath = args[2];
-		String outputTrain = args[3];
-		String outputTest = args[4];
-
-		Hashtable<String, String> trainFileList = readTrainListFile(trainFileListPath);
-		List<String> testFileList = readTestListFile(testFileListPath);
+		String outputFile = args[1];
 
 		Thread[] threads = new Thread[6];
 		for (int i = 0; i < 6; i++) {
 			System.out.println("Running for folder " + i + " ...");
-			JsFeatureExtractor worker = new JsFeatureExtractor(htmlFolderPath,
-					trainFileList, testFileList, outputTrain, outputTest,
-					Integer.toString(i));
+			GloVeJavaScriptInputGenerator worker = new GloVeJavaScriptInputGenerator(
+					htmlFolderPath, outputFile, Integer.toString(i));
 			threads[i] = new Thread(worker);
 			threads[i].start();
 			// worker.run();
