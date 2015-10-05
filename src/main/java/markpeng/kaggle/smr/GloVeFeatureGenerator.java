@@ -55,7 +55,7 @@ public class GloVeFeatureGenerator {
 		settings.getFormat().setQuote('"');
 		settings.setHeaderExtractionEnabled(true);
 		settings.setEmptyValue("");
-		settings.setMaxCharsPerColumn(40960);
+		settings.setMaxCharsPerColumn(99999999);
 
 		// -------------------------------------------------------------------------------------------
 		// Train Data
