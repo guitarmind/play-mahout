@@ -144,7 +144,7 @@ public class GloVeJavaScriptInputGenerator implements Runnable {
 				| WordDelimiterFilter.GENERATE_WORD_PARTS;
 		ts = new WordDelimiterFilter(ts, flags, null);
 		ts = new LowerCaseFilter(Version.LUCENE_46, ts);
-//		ts = new PorterStemFilter(ts);
+		ts = new PorterStemFilter(ts);
 		// ts = new DictionaryCompoundWordTokenFilter(Version.LUCENE_46, ts,
 		// new CharArraySet(Version.LUCENE_46, dictionary, true), 6, 4,
 		// 10, false);

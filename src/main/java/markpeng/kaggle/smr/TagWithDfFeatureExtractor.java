@@ -73,7 +73,16 @@ public class TagWithDfFeatureExtractor implements Runnable {
 				String tmp = aLine.trim();
 				if (tmp.length() > 0) {
 					String[] tokens = tmp.split(":");
-					result.add(tokens[0].trim());
+					if (tokens.length == 2) {
+						String tag = tokens[0].trim();
+						if (!result.contains(tag))
+							result.add(tag);
+					} else {
+						// skip
+						// String tag = tmp.substring(0, tmp.lastIndexOf(":"));
+						// if (!result.contains(tag))
+						// result.add(tag);
+					}
 				}
 			}
 		} finally {
