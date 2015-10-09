@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
@@ -30,6 +34,127 @@ public class SponsoredFileChecker {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
+
+	public void extractDomainNameList(String targetFolder) throws Exception {
+		try {
+			File checker = new File(targetFolder);
+			if (checker.exists()) {
+
+				List<String> files = new ArrayList<String>();
+				for (final File fileEntry : checker.listFiles()) {
+					if (fileEntry.getName().contains(".txt")) {
+						String tmp = fileEntry.getAbsolutePath();
+						files.add(tmp);
+					}
+				}
+
+				TreeMap<String, Integer> tokenCount = new TreeMap<String, Integer>();
+				for (String file : files) {
+
+					System.out.println("Scanning html file: " + file);
+
+					BufferedReader in = new BufferedReader(
+							new InputStreamReader(new FileInputStream(file),
+									"UTF-8"));
+					File f = new File(file);
+					try {
+						StringBuffer htmlStr = new StringBuffer();
+						String aLine = null;
+						while ((aLine = in.readLine()) != null) {
+							htmlStr.append(aLine + newLine);
+						}
+
+						String ulrPattern = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
+						Pattern p = Pattern.compile(ulrPattern);
+						Matcher matcher = p.matcher(htmlStr.toString());
+						List<String> domainNames = new ArrayList<String>();
+						while (matcher.find()) {
+							String raw = matcher.group();
+							String url = raw.replaceAll("&lt;", "");
+							url = url.replaceAll("&gt;", "");
+
+							if (url.contains("?"))
+								url = url.substring(0, url.indexOf("?"));
+							if (url.contains(";"))
+								url = url.substring(0, url.indexOf(";"));
+							if (url.contains("&"))
+								url = url.substring(0, url.indexOf("&"));
+							if (url.contains("#"))
+								url = url.substring(0, url.indexOf("#"));
+							if (url.contains("|"))
+								url = url.substring(0, url.indexOf("|"));
+							if (url.contains("@"))
+								url = url.substring(0, url.indexOf("@"));
+							if (url.contains("%"))
+								url = url.substring(0, url.indexOf("%"));
+
+							String domain = null;
+							if (!url.contains("file:///") && url.length() > 7) {
+								String[] tmpArr = url.split("/");
+								// if (tmpArr.length > 3)
+								// url = url
+								// .substring(0, url.lastIndexOf("/"));
+								if (tmpArr.length > 3)
+									url = "http://" + tmpArr[2];
+								try {
+									if (!url.trim().equals("http://")
+											&& !url.trim().equals("https://"))
+										domain = getDomainName(url);
+								} catch (Exception e) {
+									System.out.println("Error: " + url);
+									e.printStackTrace();
+									throw e;
+								}
+							} else
+								domain = url;
+
+							if (domain != null && domain.length() < 2)
+								System.err.println("Too short: " + domain + "("
+										+ raw + ")");
+							if (domain != null && !domainNames.contains(domain))
+								domainNames.add(domain);
+						}
+
+						// only count one time for each tag
+						for (String t : domainNames) {
+							if (!tokenCount.containsKey(t)) {
+								tokenCount.put(t, 1);
+								// System.out.println(t);
+							} else {
+								tokenCount.put(t, tokenCount.get(t) + 1);
+							}
+						}
+					} finally {
+						in.close();
+					}
+
+					System.out.println("Scanned html file: " + file);
+				} // end of for loop
+
+				// for (String tag : tagCount.keySet()) {
+				// System.out.println(tag + ": " + tagCount.get(tag));
+				// }
+
+				int minDF = 3;
+				SortedSet<Map.Entry<String, Integer>> sortedFeatures = entriesSortedByValues(tokenCount);
+				int validN = 0;
+				for (Map.Entry<String, Integer> m : sortedFeatures) {
+					String feature = m.getKey();
+					int df = m.getValue();
+					if (df >= minDF) {
+						System.out.println(feature + ": " + df);
+						validN++;
+					}
+				} // end of feature loop
+
+				System.out.println("Total # of features (DF >= " + minDF
+						+ "): " + validN);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public void extractScriptTokenList(String targetFolder) {
 		try {
@@ -72,7 +197,8 @@ public class SponsoredFileChecker {
 								}
 							}
 
-							codeTokens = processTextByLucene(tmpStr.toString());
+							codeTokens = processTextByLucene(tmpStr.toString(),
+									true, false);
 						}
 
 						// only count one time for each tag
@@ -199,7 +325,8 @@ public class SponsoredFileChecker {
 		}
 	}
 
-	public List<String> processTextByLucene(String text) throws IOException {
+	public List<String> processTextByLucene(String text, boolean english,
+			boolean digits) throws IOException {
 		List<String> result = new ArrayList<String>();
 
 		// Set stopWords = new StandardAnalyzer(Version.LUCENE_46)
@@ -230,9 +357,20 @@ public class SponsoredFileChecker {
 				if (termAtt.length() > 0) {
 					String word = termAtt.toString();
 
-					if (word.length() > 1 && isAllEnglish(word)
-							&& !result.contains(word))
-						result.add(word);
+					boolean valid = false;
+
+					if (english && !digits)
+						valid = isAllEnglish(word);
+					else if (!english && digits)
+						valid = isAllDigits(word);
+					else if (english && digits)
+						valid = isAllEnglishAndDigits(word);
+
+					if (valid) {
+						if (word.length() > 1 && !result.contains(word))
+							result.add(word);
+					}
+
 					// System.out.println(word);
 
 					// wordCount++;
@@ -266,6 +404,43 @@ public class SponsoredFileChecker {
 		return result;
 	}
 
+	public boolean isAllDigits(String text) {
+		boolean result = true;
+
+		String[] tokens = text.split("\\s");
+
+		for (String token : tokens) {
+			for (int i = 0; i < token.length(); i++) {
+				char c = token.charAt(i);
+				if (!Character.isDigit(c)) {
+					result = false;
+					break;
+				}
+			}
+		}
+
+		return result;
+	}
+
+	public boolean isAllEnglishAndDigits(String text) {
+		boolean result = true;
+
+		String[] tokens = text.split("\\s");
+
+		for (String token : tokens) {
+			for (int i = 0; i < token.length(); i++) {
+				char c = token.charAt(i);
+				if (!Character.isAlphabetic(c) && c != '-'
+						&& !Character.isDigit(c)) {
+					result = false;
+					break;
+				}
+			}
+		}
+
+		return result;
+	}
+
 	public static <K, V extends Comparable<? super V>> SortedSet<Map.Entry<K, V>> entriesSortedByValues(
 			Map<K, V> map) {
 		SortedSet<Map.Entry<K, V>> sortedEntries = new TreeSet<Map.Entry<K, V>>(
@@ -285,12 +460,22 @@ public class SponsoredFileChecker {
 		return sortedEntries;
 	}
 
-	public static void main(String[] args) {
+	public static String getDomainName(String url) throws URISyntaxException {
+		URI uri = new URI(url);
+		String domain = uri.getHost();
+		if (domain != null)
+			return domain.startsWith("www.") ? domain.substring(4) : domain;
+		else
+			return url;
+	}
+
+	public static void main(String[] args) throws Exception {
 		String targetFolder = "/home/markpeng/Share/Kaggle/tnative/sponsored";
 
 		SponsoredFileChecker worker = new SponsoredFileChecker();
 		// worker.extractTagList(targetFolder);
-		worker.extractScriptTokenList(targetFolder);
+		// worker.extractScriptTokenList(targetFolder);
+		worker.extractDomainNameList(targetFolder);
 	}
 
 }
