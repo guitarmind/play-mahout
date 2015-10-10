@@ -198,22 +198,20 @@ public class SpecialFeatureExtractor implements Runnable {
 				int tindex = 0;
 				for (String t : typeList) {
 					if (tindex != typeList.size() - 1)
-						resultStr.append("\"" + t + "_count\",");
+						resultStr.append("\"" + t + "_typeCount\",");
 					else
-						resultStr.append("\"" + t + "_count\",");
+						resultStr.append("\"" + t + "_typeCount\",");
 
 					tindex++;
 				}
-				tindex = 0;
 				for (String t : attrList) {
 					if (tindex != attrList.size() - 1)
-						resultStr.append("\"" + t + "_count\",");
+						resultStr.append("\"" + t + "_attrCount\",");
 					else
-						resultStr.append("\"" + t + "_count\",");
+						resultStr.append("\"" + t + "_attrCount\",");
 
 					tindex++;
 				}
-				tindex = 0;
 				for (String t : spFeatureNames) {
 					if (tindex != spFeatureNames.length - 1)
 						resultStr.append("\"" + t + "_count\",");
