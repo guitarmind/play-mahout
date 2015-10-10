@@ -204,6 +204,7 @@ public class SpecialFeatureExtractor implements Runnable {
 
 					tindex++;
 				}
+				tindex = 0;
 				for (String t : attrList) {
 					if (tindex != attrList.size() - 1)
 						resultStr.append("\"" + t + "_count\",");
@@ -212,6 +213,7 @@ public class SpecialFeatureExtractor implements Runnable {
 
 					tindex++;
 				}
+				tindex = 0;
 				for (String t : spFeatureNames) {
 					if (tindex != spFeatureNames.length - 1)
 						resultStr.append("\"" + t + "_count\",");
@@ -292,11 +294,11 @@ public class SpecialFeatureExtractor implements Runnable {
 
 						// get all raw text
 						String title = doc.title();
-						System.out.println(title);
+						// System.out.println(title);
 						String allText = "";
 						if (doc.body() != null && doc.body().hasText()) {
 							allText = doc.body().text().trim();
-							System.out.println(allText.length());
+							// System.out.println(allText.length());
 						}
 
 						int titleCount = 0;
@@ -318,7 +320,7 @@ public class SpecialFeatureExtractor implements Runnable {
 							if (t.length() == 1)
 								tCount++;
 						}
-						if (tCount >= 0.9 * title.length())
+						if (tCount >= 0.9 * titleGrams.length)
 							weirdTitleUnigram = 1;
 
 						int cCount = 0;
@@ -326,7 +328,7 @@ public class SpecialFeatureExtractor implements Runnable {
 							if (c.length() == 1)
 								cCount++;
 						}
-						if (cCount >= 0.9 * allText.length())
+						if (cCount >= 0.9 * contentGrams.length)
 							weirdContentUnigram = 1;
 
 						// comment count
