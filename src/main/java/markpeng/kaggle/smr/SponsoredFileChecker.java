@@ -25,6 +25,8 @@ import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
+import org.jsoup.nodes.Attributes;
 import org.jsoup.nodes.DataNode;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -34,6 +36,230 @@ public class SponsoredFileChecker {
 
 	private static final int BUFFER_LENGTH = 1000;
 	private static final String newLine = System.getProperty("line.separator");
+
+	public void extractAttributeList(String targetFolder, String attrListPath)
+			throws Exception {
+		try {
+			List<String> fileTypes = new ArrayList<String>();
+			// extract attributes lists
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					new FileInputStream(attrListPath), "UTF-8"));
+			String aLine = null;
+			while ((aLine = in.readLine()) != null) {
+				String[] tokens = aLine.split("\t");
+				if (tokens.length >= 2) {
+					String type = tokens[0].trim().toLowerCase()
+							.replace("*", "");
+					if (!fileTypes.contains(type))
+						fileTypes.add(type);
+				}
+			}
+			in.close();
+
+			System.out.println(fileTypes);
+			System.out.println("Attribute count: " + fileTypes.size());
+
+			File checker = new File(targetFolder);
+			if (checker.exists()) {
+
+				List<String> files = new ArrayList<String>();
+				for (final File fileEntry : checker.listFiles()) {
+					if (fileEntry.getName().contains(".txt")) {
+						String tmp = fileEntry.getAbsolutePath();
+						files.add(tmp);
+					}
+				}
+
+				TreeMap<String, Integer> tokenCount = new TreeMap<String, Integer>();
+				for (String file : files) {
+
+					System.out.println("Scanning html file: " + file);
+
+					in = new BufferedReader(new InputStreamReader(
+							new FileInputStream(file), "UTF-8"));
+					File f = new File(file);
+					try {
+						StringBuffer htmlStr = new StringBuffer();
+						aLine = null;
+						while ((aLine = in.readLine()) != null) {
+							htmlStr.append(aLine + newLine);
+						}
+
+						Document doc = Jsoup.parse(htmlStr.toString());
+
+						TreeMap<String, Integer> innerCount = new TreeMap<String, Integer>();
+						Elements allNodes = doc.getAllElements();
+						for (Element e : allNodes) {
+							Attributes attrs = e.attributes();
+
+							for (Attribute a : attrs) {
+								String name = a.getKey();
+								if (!innerCount.containsKey(name)) {
+									innerCount.put(name, 1);
+								} else {
+									innerCount.put(name,
+											innerCount.get(name) + 1);
+								}
+							}
+
+						}
+
+						// only count one time for each tag
+						for (String t : innerCount.keySet()) {
+							if (!tokenCount.containsKey(t)) {
+								tokenCount.put(t, 1);
+								// System.out.println(t);
+							} else {
+								tokenCount.put(t, tokenCount.get(t) + 1);
+							}
+						}
+					} finally {
+						in.close();
+					}
+
+					System.out.println("Scanned html file: " + file);
+				} // end of for loop
+
+				// for (String tag : tagCount.keySet()) {
+				// System.out.println(tag + ": " + tagCount.get(tag));
+				// }
+
+				int minDF = 3;
+				SortedSet<Map.Entry<String, Integer>> sortedFeatures = entriesSortedByValues(tokenCount);
+				int validN = 0;
+				for (Map.Entry<String, Integer> m : sortedFeatures) {
+					String feature = m.getKey();
+					int df = m.getValue();
+					if (df >= minDF) {
+						System.out.println(feature + ": " + df);
+						validN++;
+					}
+				} // end of feature loop
+
+				System.out.println("Total # of features (DF >= " + minDF
+						+ "): " + validN);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public void extractFileTypeList(String targetFolder,
+			String webFileListPath, String commonFileListPath) throws Exception {
+		try {
+			List<String> fileTypes = new ArrayList<String>();
+			// extract web file lists
+			BufferedReader in = new BufferedReader(new InputStreamReader(
+					new FileInputStream(webFileListPath), "UTF-8"));
+			String aLine = null;
+			while ((aLine = in.readLine()) != null) {
+				String[] tokens = aLine.split("\t");
+				if (tokens.length >= 2) {
+					String type = tokens[0].trim().toLowerCase()
+							.replace(".", "");
+					if (!fileTypes.contains(type))
+						fileTypes.add(type);
+				}
+			}
+			in.close();
+			// extract common file lists
+			in = new BufferedReader(new InputStreamReader(new FileInputStream(
+					commonFileListPath), "UTF-8"));
+			aLine = null;
+			while ((aLine = in.readLine()) != null) {
+				if (aLine.startsWith(".")) {
+					String[] tokens = aLine.split("\t");
+					if (tokens.length >= 2) {
+						String type = tokens[0].trim().toLowerCase()
+								.replace(".", "");
+						if (!fileTypes.contains(type))
+							fileTypes.add(type);
+					}
+				}
+			}
+			in.close();
+
+			System.out.println(fileTypes);
+			System.out.println("Types count: " + fileTypes.size());
+
+			File checker = new File(targetFolder);
+			if (checker.exists()) {
+
+				List<String> files = new ArrayList<String>();
+				for (final File fileEntry : checker.listFiles()) {
+					if (fileEntry.getName().contains(".txt")) {
+						String tmp = fileEntry.getAbsolutePath();
+						files.add(tmp);
+					}
+				}
+
+				TreeMap<String, Integer> tokenCount = new TreeMap<String, Integer>();
+				for (String file : files) {
+
+					System.out.println("Scanning html file: " + file);
+
+					in = new BufferedReader(new InputStreamReader(
+							new FileInputStream(file), "UTF-8"));
+					File f = new File(file);
+					try {
+						StringBuffer htmlStr = new StringBuffer();
+						aLine = null;
+						while ((aLine = in.readLine()) != null) {
+							htmlStr.append(aLine + newLine);
+						}
+
+						List<String> tokens = processTextByLucene(
+								htmlStr.toString(), true, true);
+
+						List<String> foundTypes = new ArrayList<String>();
+						for (String token : tokens) {
+							if (fileTypes.contains(token)) {
+								if (!foundTypes.contains(token))
+									foundTypes.add(token);
+							}
+						}
+
+						// only count one time for each tag
+						for (String t : foundTypes) {
+							if (!tokenCount.containsKey(t)) {
+								tokenCount.put(t, 1);
+								// System.out.println(t);
+							} else {
+								tokenCount.put(t, tokenCount.get(t) + 1);
+							}
+						}
+					} finally {
+						in.close();
+					}
+
+					System.out.println("Scanned html file: " + file);
+				} // end of for loop
+
+				// for (String tag : tagCount.keySet()) {
+				// System.out.println(tag + ": " + tagCount.get(tag));
+				// }
+
+				int minDF = 3;
+				SortedSet<Map.Entry<String, Integer>> sortedFeatures = entriesSortedByValues(tokenCount);
+				int validN = 0;
+				for (Map.Entry<String, Integer> m : sortedFeatures) {
+					String feature = m.getKey();
+					int df = m.getValue();
+					if (df >= minDF) {
+						System.out.println(feature + ": " + df);
+						validN++;
+					}
+				} // end of feature loop
+
+				System.out.println("Total # of features (DF >= " + minDF
+						+ "): " + validN);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public void extractDomainNameList(String targetFolder) throws Exception {
 		try {
@@ -475,7 +701,13 @@ public class SponsoredFileChecker {
 		SponsoredFileChecker worker = new SponsoredFileChecker();
 		// worker.extractTagList(targetFolder);
 		// worker.extractScriptTokenList(targetFolder);
-		worker.extractDomainNameList(targetFolder);
+		// worker.extractDomainNameList(targetFolder);
+		// worker.extractDomainNameList(targetFolder);
+		// worker.extractFileTypeList(targetFolder,
+		// "/home/markpeng/Share/Kaggle/tnative/web_files.txt",
+		// "/home/markpeng/Share/Kaggle/tnative/common_file_types.txt");
+		worker.extractAttributeList(targetFolder,
+				"/home/markpeng/Share/Kaggle/tnative/html_attributes.txt");
 	}
 
 }
